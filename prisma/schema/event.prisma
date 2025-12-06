@@ -1,0 +1,108 @@
+model Event {
+  id            String        @id @default(uuid())
+  title         String
+  description   String
+  host          User          @relation("hostedEvents", fields: [hostId], references: [id])
+  hostId        String
+  location      Json
+  startDate     DateTime
+  endDate       DateTime
+  joiningFee    Float          @default(0)
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  status        EventStatus    @default(UPCOMING)
+
+  participants  Participant[]
+  reviews       Review[]
+  payments      Payment[]
+  savedBy       SavedEvent[]
+}
+
+model Participant {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  event     Event    @relation(fields: [eventId], references: [id])
+  eventId   String
+
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int
+  comment   String?
+  
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  event     Event    @relation(fields: [eventId], references: [id])
+  eventId   String
+
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  amount    Float
+  status    String   @default("PENDING")
+  method    String?
+
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  event     Event    @relation(fields: [eventId], references: [id])
+  eventId   String
+
+  createdAt DateTime @default(now())
+}
+
+model SavedEvent {
+  id        String   @id @default(uuid())
+
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  event     Event    @relation(fields: [eventId], references: [id])
+  eventId   String
+
+  createdAt DateTime @default(now())
+}
+
+model Friendship {
+  id        String   @id @default(uuid())
+
+  requestor    User @relation("requested", fields: [requestorId], references: [id])
+  requestorId  String
+
+  receiver     User @relation("received", fields: [receiverId], references: [id])
+  receiverId   String
+
+  status     String   @default("PENDING")
+  createdAt  DateTime @default(now())
+}
+
+model Follow {
+  id        String   @id @default(uuid())
+
+  follower   User @relation("follower", fields: [followerId], references: [id])
+  followerId String
+
+  following  User @relation("following", fields: [followingId], references: [id])
+  followingId String
+
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  title     String
+  message   String
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
