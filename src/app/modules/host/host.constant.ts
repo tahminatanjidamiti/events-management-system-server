@@ -1,0 +1,1 @@
+export const hostFilterableFields: string[] = ["status"];
