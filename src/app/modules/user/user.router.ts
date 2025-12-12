@@ -23,7 +23,7 @@ router.post(
     return UserController.createUser(req, res, next);
   }
 );
-router.patch("/:id", fileUploader.upload.single("file"),
+router.patch("/:id", auth(Role.ADMIN, Role.HOST, Role.USER), fileUploader.upload.single("file"),
   (req: Request, res: Response, next: NextFunction) => {
     req.body = UserValidation.updateUserValidationSchema.parse(JSON.parse(req.body.data));
     return UserController.updateUser(req, res, next);

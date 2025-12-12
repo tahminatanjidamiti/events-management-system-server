@@ -1,0 +1,39 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SocialRoutes = void 0;
+const express_1 = __importDefault(require("express"));
+const social_controller_1 = require("./social.controller");
+const auth_1 = __importDefault(require("../../middlewares/auth"));
+const client_1 = require("@prisma/client");
+const social_validation_1 = require("./social.validation");
+const router = express_1.default.Router();
+router.post("/friend", (0, auth_1.default)(client_1.Role.USER), (req, res, next) => {
+    req.body = social_validation_1.SendFriendRequestSchema.parse(req.body);
+    next();
+}, social_controller_1.SocialController.sendFriendRequest);
+router.patch("/friend", (0, auth_1.default)(client_1.Role.USER), (req, res, next) => {
+    req.body = social_validation_1.FriendActionSchema.parse(req.body);
+    next();
+}, social_controller_1.SocialController.handleFriendAction);
+router.get("/friend", (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.listFriendRequests);
+router.post("/follow", (0, auth_1.default)(client_1.Role.USER), (req, res, next) => {
+    req.body = social_validation_1.FollowSchema.parse(req.body);
+    next();
+}, social_controller_1.SocialController.followUser);
+router.get("/follow", (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.listFollows);
+router.post("/save", (0, auth_1.default)(client_1.Role.USER), (req, res, next) => {
+    req.body = social_validation_1.SaveEventSchema.parse(req.body);
+    next();
+}, social_controller_1.SocialController.toggleSaveEvent);
+router.get("/save", (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.listSavedEvents);
+router.post("/review", (0, auth_1.default)(client_1.Role.USER), (req, res, next) => {
+    req.body = social_validation_1.CreateReviewSchema.parse(req.body);
+    next();
+}, social_controller_1.SocialController.createReview);
+router.get("/review", social_controller_1.SocialController.listReviews);
+router.get("/notifications", (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.listNotifications);
+router.patch("/notifications/:id/read", (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.markNotificationRead);
+exports.SocialRoutes = router;
