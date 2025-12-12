@@ -1,14 +1,20 @@
 import compression from "compression";
 import cors from "cors";
-import express from "express";
+import cookieParser from 'cookie-parser'
+import express, { Application } from "express";
 import config from "./app/config";
+import globalErrorHandler from "./app/middlewares/globalErrorHandler";
+import notFound from "./app/middlewares/notFound";
 
-const app = express();
+
+const app: Application = express();
 
 // Middleware
 app.use(cors()); 
 app.use(compression()); // Compresses response bodies for faster delivery
 app.use(express.json());
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
 
 app.use(
   cors({
@@ -28,5 +34,9 @@ app.use((req, res) => {
     message: "Route Not Found",
   });
 });
+
+app.use(globalErrorHandler);
+
+app.use(notFound);
 
 export default app;

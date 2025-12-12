@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Host" ALTER COLUMN "role" SET DEFAULT 'HOST';

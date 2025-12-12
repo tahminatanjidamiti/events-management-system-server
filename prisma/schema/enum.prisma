@@ -1,16 +1,32 @@
 enum Role {
   USER
+  HOST
   ADMIN
 }
 
 enum UserStatus {
   ACTIVE
   INACTIVE
+  BLOCK
+}
+enum FriendshipStatus {
+  REQUESTED
+  ACCEPTED
+  REJECTED
 }
 
 enum EventStatus {
-  UPCOMING
-  ONGOING
+  OPEN
+  FULL
   COMPLETED
   CANCELLED
+}
+enum HostUpdateStatus {
+  PENDING
+  APPROVED
+}
+enum PaymentStatus {
+    PAID
+    UNPAID
+    CANCEL
 }
