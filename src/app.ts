@@ -5,6 +5,7 @@ import express, { Application } from "express";
 import config from "./app/config";
 import globalErrorHandler from "./app/middlewares/globalErrorHandler";
 import notFound from "./app/middlewares/notFound";
+import router from "./app/routes";
 
 
 const app: Application = express();
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
+
 app.use(
   cors({
     origin: config.frontend_url,
@@ -23,7 +25,7 @@ app.use(
   })
 );
 
-
+app.use("/api/v1", router);
 app.get("/", (_req, res) => {
   res.send("API is running!!");
 });
