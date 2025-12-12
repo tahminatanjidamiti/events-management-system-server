@@ -4,12 +4,13 @@ model User {
   email      String     @unique
   password   String?
   role       Role       @default(USER)
+  interests  String[]   @default([])
   phone      String?
   picture    String?
   status     UserStatus @default(ACTIVE)
   isVerified Boolean    @default(false)
   bio        String?
-  city       String?
+  city       Json?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -31,10 +32,12 @@ model User {
 
 model Host {
   id         String    @id @default(uuid())
+  role       Role      @default(HOST)
   userId     String    @unique
   user       User      @relation(fields: [userId], references: [id])
   message    String?
-  status     String    @default("PENDING")
-  createdAt  DateTime  @default(now())
+  status     HostUpdateStatus    @default(PENDING)
   reviewedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }

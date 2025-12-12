@@ -3,6 +3,7 @@ import http, { Server } from "http";
 import app from "./app";
 import dotenv from "dotenv";
 
+
 dotenv.config();
 
 let server: Server | null = null;
@@ -65,4 +66,6 @@ function handleProcessEvents() {
   });
 }
 
+
 startServer()
+
