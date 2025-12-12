@@ -2,6 +2,8 @@ import express, { Request, Response, NextFunction } from "express";
 import { UserController } from "./user.controller";
 import { UserValidation } from "./user.validation";
 import { fileUploader } from "../../helper/fileUploader";
+import auth from "../../middlewares/auth";
+import { Role } from "@prisma/client";
 
 const router = express.Router();
 
@@ -10,7 +12,7 @@ const router = express.Router();
 router.get('/me', UserController.getMyProfile)
 router.get("/", UserController.getAllUsers);
 router.get("/:id", UserController.getUserById);
-router.delete("/:id", UserController.deleteUser);
+router.delete("/:id", auth(Role.ADMIN), UserController.deleteUser);
 router.post(
   "/register",
   fileUploader.upload.single("file"),
