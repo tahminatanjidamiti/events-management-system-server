@@ -2,7 +2,7 @@
 import http, { Server } from "http";
 import app from "./app";
 import dotenv from "dotenv";
-
+import { seedAdmin } from "./app/utils/seedAdmin";
 
 dotenv.config();
 
@@ -66,6 +66,7 @@ function handleProcessEvents() {
   });
 }
 
-
-startServer()
-
+(async () => {
+   await startServer()
+   await seedAdmin()
+})()
