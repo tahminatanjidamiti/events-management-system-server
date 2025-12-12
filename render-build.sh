@@ -1,6 +1,7 @@
 set -o errexit
 
-npm install
-npm run build
+npm ci
 npx prisma generate
-npx prisma migrate deploy 
+npm run build
+npx prisma migrate deploy
+npm prune --production
