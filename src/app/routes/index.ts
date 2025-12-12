@@ -4,7 +4,8 @@ import { AuthRoutes } from '../modules/auth/auth.router';
 import { HostRoutes } from '../modules/host/host.routes';
 import { EventRoutes } from '../modules/event/event.routes';
 import { PaymentRoutes } from '../modules/payment/payment.routes';
-
+import { SocialRoutes } from '../modules/social/social.routes';
+import { MetaRoutes } from '../modules/meta/meta.routes';
 
 const router = express.Router();
 
@@ -28,6 +29,14 @@ const moduleRoutes = [
     {
         path: '/payment',
         route: PaymentRoutes
+    },
+    {
+        path: '/social',
+        route: SocialRoutes
+    },
+    {
+        path: '/metadata',
+        route: MetaRoutes
     },
 ];
 
