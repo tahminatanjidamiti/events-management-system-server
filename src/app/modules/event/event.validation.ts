@@ -1,3 +1,4 @@
+import { EventStatus } from "@prisma/client";
 import { z } from "zod";
 
 const createEventValidationSchema = z.object({
@@ -9,12 +10,18 @@ const createEventValidationSchema = z.object({
   maxParticipants: z.number().int().optional().nullable(),
   image: z.string().optional().nullable(),
   location: z.object({
-    lat: z.number(),
-    lng: z.number(),
+    lat: z.number({ message: "Latitude" }),
+    lng: z.number({ message: "Longitude" }),
     formattedAddress: z.string().optional(),
   }).optional().nullable(),
   startDate: z.string(),
   endDate: z.string(),
+  status: z.enum([
+    EventStatus.OPEN,
+    EventStatus.FULL,
+    EventStatus.COMPLETED,
+    EventStatus.CANCELLED,
+  ]).optional(),
   joiningFee: z.number().nonnegative().optional(),
 });
 

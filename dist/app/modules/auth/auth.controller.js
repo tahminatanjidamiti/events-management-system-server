@@ -19,6 +19,17 @@ const sendResponse_1 = __importDefault(require("../../shared/sendResponse"));
 const http_status_1 = __importDefault(require("http-status"));
 const loginWithEmailAndPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield auth_service_1.AuthService.loginWithEmailAndPassword(req.body);
+    const { accessToken, refreshToken } = result;
+    res.cookie("accessToken", accessToken, {
+        secure: true,
+        httpOnly: true,
+        sameSite: "none",
+    });
+    res.cookie("refreshToken", refreshToken, {
+        secure: true,
+        httpOnly: true,
+        sameSite: "none",
+    });
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
@@ -35,10 +46,39 @@ const authWithGoogle = (req, res) => __awaiter(void 0, void 0, void 0, function*
         success: true,
         message: "User loggedin successfully!",
         data: {
-            result
-        }
+            id: result.id,
+            fullName: result.fullName,
+            email: result.email,
+            role: result.role,
+            picture: result.picture,
+            phone: result.phone,
+            status: result.status,
+            isVerified: result.isVerified,
+            bio: result.bio,
+            interests: result.interests,
+            city: result.city,
+            avgRating: result.avgRating,
+            reviewCount: result.reviewCount,
+        },
     });
 });
+const refreshToken = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { refreshToken } = req.cookies;
+    const result = yield auth_service_1.AuthService.refreshToken(refreshToken);
+    res.cookie("accessToken", result.accessToken, {
+        secure: true,
+        httpOnly: true,
+        sameSite: "none",
+    });
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: "Access token genereated successfully!",
+        data: {
+            message: "Access token genereated successfully!",
+        },
+    });
+}));
 const forgotPassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     yield auth_service_1.AuthService.forgotPassword(req.body);
     (0, sendResponse_1.default)(res, {
@@ -61,6 +101,7 @@ const resetPassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
 exports.AuthController = {
     loginWithEmailAndPassword,
     authWithGoogle,
+    refreshToken,
     resetPassword,
     forgotPassword,
 };

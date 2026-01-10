@@ -26,7 +26,7 @@ const seedAdmin = () => __awaiter(void 0, void 0, void 0, function* () {
         if (isAdminExist) {
             return;
         }
-        const hashedPassword = yield bcryptjs_1.default.hash(config_1.default.admin.admin_email, Number(config_1.default.salt_round));
+        const hashedPassword = yield bcryptjs_1.default.hash(config_1.default.admin.admin_password, Number(config_1.default.salt_round));
         const payload = {
             fullName: "Admin Miller",
             role: client_1.Role.ADMIN,

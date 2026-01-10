@@ -31,7 +31,11 @@ const loginWithEmailAndPassword = (_a) => __awaiter(void 0, [_a], void 0, functi
     const isPasswordMatched = yield bcryptjs_1.default.compare(password, user.password);
     if (!isPasswordMatched)
         throw new Error("Password does not match!");
+    const accessToken = jwtHelper_1.jwtHelper.generateToken({ id: user.id, email: user.email, role: user.role }, config_1.default.jwt.jwt_secret, config_1.default.jwt.expires_in);
+    const refreshToken = jwtHelper_1.jwtHelper.generateToken({ id: user.id, email: user.email, role: user.role }, config_1.default.jwt.refresh_token_secret, config_1.default.jwt.refresh_token_expires_in);
     return {
+        accessToken,
+        refreshToken,
         id: user.id,
         fullName: user.fullName,
         email: user.email,
@@ -79,6 +83,30 @@ const authWithGoogle = (data) => __awaiter(void 0, void 0, void 0, function* () 
         reviewCount: user.reviewCount,
     };
 });
+const refreshToken = (token) => __awaiter(void 0, void 0, void 0, function* () {
+    let decodedData;
+    try {
+        decodedData = jwtHelper_1.jwtHelper.verifyToken(token, config_1.default.jwt.refresh_token_secret);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    catch (err) {
+        throw new Error("You are not authorized!");
+    }
+    const userData = yield prisma_1.prisma.user.findUniqueOrThrow({
+        where: {
+            email: decodedData.email,
+            status: client_1.UserStatus.ACTIVE
+        }
+    });
+    const accessToken = jwtHelper_1.jwtHelper.generateToken({
+        id: userData.id,
+        email: userData.email,
+        role: userData.role
+    }, config_1.default.jwt.jwt_secret, config_1.default.jwt.expires_in);
+    return {
+        accessToken
+    };
+});
 const forgotPassword = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     const userData = yield prisma_1.prisma.user.findUniqueOrThrow({
         where: {
@@ -86,7 +114,7 @@ const forgotPassword = (payload) => __awaiter(void 0, void 0, void 0, function* 
             status: client_1.UserStatus.ACTIVE
         }
     });
-    const resetPassToken = jwtHelper_1.jwtHelper.generateToken({ email: userData.email, role: userData.role }, config_1.default.jwt.reset_pass_secret, config_1.default.jwt.reset_pass_token_expires_in);
+    const resetPassToken = jwtHelper_1.jwtHelper.generateToken({ id: userData.id, email: userData.email, role: userData.role }, config_1.default.jwt.reset_pass_secret, config_1.default.jwt.reset_pass_token_expires_in);
     const resetPassLink = config_1.default.reset_pass_link + `?userId=${userData.id}&token=${resetPassToken}`;
     yield (0, emailSender_1.default)(userData.email, "Reset Password Link", `
         <div>
@@ -127,6 +155,7 @@ const resetPassword = (token, payload) => __awaiter(void 0, void 0, void 0, func
 exports.AuthService = {
     loginWithEmailAndPassword,
     authWithGoogle,
+    refreshToken,
     forgotPassword,
     resetPassword,
 };

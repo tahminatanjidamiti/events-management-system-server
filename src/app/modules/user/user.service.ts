@@ -7,9 +7,23 @@ import bcryptjs from "bcryptjs";
 import { prisma } from "../../shared/prisma";
 import { fileUploader } from "../../helper/fileUploader";
 import config from "../../config";
+import httpStatus from "http-status";
 import { Request } from "express";
+import ApiError from "../../errors/ApiError";
 
 const createUser = async (req: Request) => {
+  const { email } = req.body;
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (existingUser) {
+    throw new ApiError(
+      httpStatus.CONFLICT,
+      "Email already exists"
+    );
+  }
   if (req.file) {
     const uploadResult = await fileUploader.uploadToCloudinary(req.file);
     req.body.picture = uploadResult?.secure_url;
@@ -77,11 +91,24 @@ const getAllUsers = async (params: any, options: IOptions) => {
 const getUserById = async (id: string) => {
   return prisma.user.findUnique({
     where: { id },
-    include: {
-      hostProfile: true,
+      select: {
+      id: true,
+      fullName: true,
+      email: true,
+      role: true,
+      interests: true,
+      phone: true,
+      picture: true,
+      status: true,
+      isVerified: true,
+      bio: true,
+      city: true,
+      avgRating: true,
+      reviewCount: true,
       followers: true,
       following: true,
-    },
+      hostProfile: true,
+      }
   });
 };
 const getMyProfile = async (user: IUser) => {

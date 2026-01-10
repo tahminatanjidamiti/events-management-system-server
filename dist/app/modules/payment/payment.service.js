@@ -36,6 +36,16 @@ const createPaymentSession = (userId, eventId) => __awaiter(void 0, void 0, void
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Already joined this event");
     }
     const transactionId = (0, uuid_1.v4)();
+    const payment = yield prisma_1.prisma.payment.create({
+        data: {
+            amount: event.joiningFee,
+            transactionId,
+            method: "stripe",
+            status: client_1.PaymentStatus.UNPAID,
+            userId,
+            eventId,
+        },
+    });
     const session = yield stripe_1.stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         mode: "payment",
@@ -51,38 +61,24 @@ const createPaymentSession = (userId, eventId) => __awaiter(void 0, void 0, void
             },
         ],
         metadata: {
+            paymentId: payment.id,
             userId,
             eventId,
-            transactionId,
         },
         success_url: `${config_1.default.frontend_url}/payment-success`,
         cancel_url: `${config_1.default.frontend_url}/payment-cancel`,
-    });
-    const payment = yield prisma_1.prisma.payment.create({
-        data: {
-            amount: event.joiningFee,
-            transactionId,
-            method: "stripe",
-            status: client_1.PaymentStatus.UNPAID,
-            paymentGatewayData: { sessionId: session.id },
-            userId,
-            eventId,
-        },
     });
     return { url: session.url, payment };
 });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleStripeCheckoutCompleted = (session) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId, eventId, transactionId } = session.metadata;
-    const payment = yield prisma_1.prisma.payment.findUnique({
-        where: { transactionId },
-    });
-    if (!payment) {
-        throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "Payment not found");
+    const { paymentId, userId, eventId } = session.metadata;
+    if (!paymentId) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Missing paymentId in metadata");
     }
     yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
         yield tx.payment.update({
-            where: { id: payment.id },
+            where: { id: paymentId },
             data: {
                 status: client_1.PaymentStatus.PAID,
                 paymentGatewayData: session,

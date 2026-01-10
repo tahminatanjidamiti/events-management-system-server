@@ -45,44 +45,43 @@ const sendFriendRequest = async (userId: string, payload: IFriendRequestPayload)
 };
 
 const handleFriendAction = async (userId: string, payload: IFriendUpdatePayload) => {
-  const req = await prisma.friendship.findUniqueOrThrow({ where: { id: payload.requestId } });
+  const friendship = await prisma.friendship.findUniqueOrThrow({
+    where: { id: payload.requestId },
+  });
 
-  if (req.receiverId !== userId) {
+  if (friendship.receiverId !== userId) {
     throw new ApiError(httpStatus.FORBIDDEN, "Not allowed");
   }
 
-  if (payload.action === "accept") {
-    const updated = await prisma.friendship.update({
-      where: { id: payload.requestId },
-      data: { status: FriendshipStatus.ACCEPTED },
-    });
-
-    // notify requestor
-    await prisma.notification.create({
-      data: {
-        userId: req.requestorId,
-        title: "Friend request accepted",
-        message: `Your friend request has been accepted.`,
-      },
-    });
-
-    return updated;
-  } else {
-    const updated = await prisma.friendship.update({
-      where: { id: payload.requestId },
-      data: { status: FriendshipStatus.REJECTED },
-    });
-
-    await prisma.notification.create({
-      data: {
-        userId: req.requestorId,
-        title: "Friend request rejected",
-        message: `Your friend request has been rejected.`,
-      },
-    });
-
-    return updated;
+  if (friendship.status !== FriendshipStatus.REQUESTED) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Request already handled");
   }
+
+  const updated = await prisma.friendship.update({
+    where: { id: friendship.id },
+    data: {
+      status:
+        payload.action === "accept"
+          ? FriendshipStatus.ACCEPTED
+          : FriendshipStatus.REJECTED,
+    },
+  });
+
+  await prisma.notification.create({
+    data: {
+      userId: friendship.requestorId,
+      title:
+        payload.action === "accept"
+          ? "Friend request accepted"
+          : "Friend request rejected",
+      message:
+        payload.action === "accept"
+          ? "Your friend request has been accepted."
+          : "Your friend request has been rejected.",
+    },
+  });
+
+  return updated;
 };
 
 const listFriendRequests = async (filters: any, options: IOptions) => {

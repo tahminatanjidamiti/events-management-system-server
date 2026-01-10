@@ -9,18 +9,10 @@ const host_controller_1 = require("./host.controller");
 const auth_1 = __importDefault(require("../../middlewares/auth"));
 const client_1 = require("@prisma/client");
 const host_validation_1 = require("./host.validation");
+const validateRequest_1 = __importDefault(require("../../middlewares/validateRequest"));
 const router = express_1.default.Router();
-router.get("/", host_controller_1.HostController.getAllHosts);
-router.post("/request", (0, auth_1.default)(client_1.Role.USER), (req, res, next) => {
-    req.body = host_validation_1.HostValidation.createHostSchema.parse(req.body);
-    next();
-}, host_controller_1.HostController.requestHost);
-router.patch("/:id", (0, auth_1.default)(client_1.Role.HOST), (req, res, next) => {
-    req.body = host_validation_1.HostValidation.updateHostSchema.parse(req.body);
-    next();
-}, host_controller_1.HostController.updateHost);
-router.patch("/approve/:id", (0, auth_1.default)(client_1.Role.ADMIN), (req, res, next) => {
-    req.body = host_validation_1.HostValidation.approvedHostSchema.parse(req.body);
-    next();
-}, host_controller_1.HostController.approveHost);
+router.get("/", (0, auth_1.default)(client_1.Role.ADMIN), host_controller_1.HostController.getAllHosts);
+router.post("/request", (0, validateRequest_1.default)(host_validation_1.HostValidation.createHostSchema), (0, auth_1.default)(client_1.Role.USER), host_controller_1.HostController.requestHost);
+router.patch("/approve/:id", (0, validateRequest_1.default)(host_validation_1.HostValidation.approvedHostSchema), (0, auth_1.default)(client_1.Role.ADMIN), host_controller_1.HostController.approveHost);
+router.patch("/:id", (0, validateRequest_1.default)(host_validation_1.HostValidation.updateHostSchema), (0, auth_1.default)(client_1.Role.HOST), host_controller_1.HostController.updateHost);
 exports.HostRoutes = router;

@@ -3,11 +3,12 @@ import catchAsync from "../../shared/catchAsync";
 import sendResponse from "../../shared/sendResponse";
 import httpStatus from "http-status";
 import { PaymentService } from "./payment.service";
+import { IUser } from "../user/user.interface";
 
-const createCheckoutSession = catchAsync( async (req: Request, res: Response) => {
-    const { userId, eventId } = req.body;
-
-    const result = await PaymentService.createPaymentSession(userId, eventId);
+const createCheckoutSession = catchAsync( async (req: Request & { user?: IUser }, res: Response) => {
+    const { eventId } = req.body;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const result = await PaymentService.createPaymentSession(req.user!.id, eventId);
 
     sendResponse(res, {
       statusCode: httpStatus.OK,

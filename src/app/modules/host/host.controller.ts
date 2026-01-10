@@ -3,14 +3,12 @@ import catchAsync from "../../shared/catchAsync";
 import sendResponse from "../../shared/sendResponse";
 import httpStatus from "http-status";
 import { HostService } from "./host.service";
-
+import { IUser } from "../user/user.interface";
 
 const requestHost = catchAsync(
-  async (req: Request, res: Response) => {
-    const result = await HostService.requestToBecomeHost(
-      req.body.userId,
-      req.body
-    );
+  async (req: Request & { user?: IUser }, res: Response) => {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const result = await HostService.requestToBecomeHost(req.user!.id, req.body);
 
     sendResponse(res, {
       statusCode: httpStatus.CREATED,

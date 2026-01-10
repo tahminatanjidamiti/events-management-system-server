@@ -51,39 +51,35 @@ const sendFriendRequest = (userId, payload) => __awaiter(void 0, void 0, void 0,
     return created;
 });
 const handleFriendAction = (userId, payload) => __awaiter(void 0, void 0, void 0, function* () {
-    const req = yield prisma_1.prisma.friendship.findUniqueOrThrow({ where: { id: payload.requestId } });
-    if (req.receiverId !== userId) {
+    const friendship = yield prisma_1.prisma.friendship.findUniqueOrThrow({
+        where: { id: payload.requestId },
+    });
+    if (friendship.receiverId !== userId) {
         throw new ApiError_1.default(http_status_1.default.FORBIDDEN, "Not allowed");
     }
-    if (payload.action === "accept") {
-        const updated = yield prisma_1.prisma.friendship.update({
-            where: { id: payload.requestId },
-            data: { status: client_1.FriendshipStatus.ACCEPTED },
-        });
-        // notify requestor
-        yield prisma_1.prisma.notification.create({
-            data: {
-                userId: req.requestorId,
-                title: "Friend request accepted",
-                message: `Your friend request has been accepted.`,
-            },
-        });
-        return updated;
+    if (friendship.status !== client_1.FriendshipStatus.REQUESTED) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Request already handled");
     }
-    else {
-        const updated = yield prisma_1.prisma.friendship.update({
-            where: { id: payload.requestId },
-            data: { status: client_1.FriendshipStatus.REJECTED },
-        });
-        yield prisma_1.prisma.notification.create({
-            data: {
-                userId: req.requestorId,
-                title: "Friend request rejected",
-                message: `Your friend request has been rejected.`,
-            },
-        });
-        return updated;
-    }
+    const updated = yield prisma_1.prisma.friendship.update({
+        where: { id: friendship.id },
+        data: {
+            status: payload.action === "accept"
+                ? client_1.FriendshipStatus.ACCEPTED
+                : client_1.FriendshipStatus.REJECTED,
+        },
+    });
+    yield prisma_1.prisma.notification.create({
+        data: {
+            userId: friendship.requestorId,
+            title: payload.action === "accept"
+                ? "Friend request accepted"
+                : "Friend request rejected",
+            message: payload.action === "accept"
+                ? "Your friend request has been accepted."
+                : "Your friend request has been rejected.",
+        },
+    });
+    return updated;
 });
 const listFriendRequests = (filters, options) => __awaiter(void 0, void 0, void 0, function* () {
     const { page, limit, skip } = paginationHelper_1.paginationHelper.calculatePagination(options);

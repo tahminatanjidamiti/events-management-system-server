@@ -10,6 +10,7 @@ import { Request } from "express";
 import ApiError from "../../errors/ApiError";
 import { extractJsonFromMessage } from "../../helper/extractJsonFromMessage";
 import { openai } from "../../helper/open-router";
+import { IUser } from "../user/user.interface";
 
 const createEvent = async (req: Request) => {
   if (req.file) {
@@ -53,7 +54,7 @@ const updateEvent = async (eventId: string, req: Request) => {
 
   return prisma.event.update({
     where: { id: eventId },
-    data,
+    data : data,
   });
 };
 const getAISuggestions = async (payload: { interests: string[] }) => {
@@ -218,6 +219,78 @@ const getEventById = async (id: string) => {
   });
 };
 
+const myEvents = async (
+  user: IUser,
+  filters: any,
+  options: IOptions
+) => {
+  const { page, limit, skip, sortBy, sortOrder } =
+    paginationHelper.calculatePagination(options);
+
+  const { searchTerm, ...filterData } = filters;
+
+  const andConditions: Prisma.EventWhereInput[] = [];
+
+  if (searchTerm) {
+    andConditions.push({
+      OR: eventSearchableFields.map((field) => ({
+        [field]: { contains: searchTerm, mode: "insensitive" },
+      })),
+    });
+  }
+
+  if (Object.keys(filterData).length > 0) {
+    andConditions.push({
+      AND: Object.keys(filterData).map((key) => ({
+        [key]: { equals: (filterData as any)[key] },
+      })),
+    });
+  }
+
+ if (user.role === "HOST") {
+  andConditions.push({
+    hostId: user.id,
+  });
+}
+
+if (user.role === "USER") {
+  andConditions.push({
+    participants: {
+      some: {
+        userId: user.id,
+      },
+    },
+  });
+}
+
+  const where: Prisma.EventWhereInput =
+    andConditions.length > 0 ? { AND: andConditions } : {};
+
+  const data = await prisma.event.findMany({
+    where,
+    skip,
+    take: limit,
+    orderBy: sortBy ? { [sortBy]: sortOrder } : { createdAt: "desc" },
+    include: {
+      host: {
+        select: {
+          id: true,
+          fullName: true,
+          picture: true,
+        },
+      },
+      participants: true,
+    },
+  });
+
+  const total = await prisma.event.count({ where });
+
+  return {
+    meta: { page, limit, total },
+    data,
+  };
+};
+
 const listEvents = async (filters: any, options: IOptions) => {
   const { page, limit, skip, sortBy, sortOrder } =
     paginationHelper.calculatePagination(options);
@@ -270,6 +343,7 @@ export const EventService = {
   updateEvent,
   getAISuggestions,
   getEventById,
+  myEvents,
   listEvents,
   deleteEvent,
 };

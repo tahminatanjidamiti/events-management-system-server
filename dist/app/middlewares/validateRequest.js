@@ -10,11 +10,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const validateRequest = (schema) => (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        yield schema.parseAsync({
-            body: req.body
-        });
-        return next();
+        if (((_a = req.body) === null || _a === void 0 ? void 0 : _a.data) && typeof req.body.data === "string") {
+            req.body = JSON.parse(req.body.data);
+        }
+        req.body = yield schema.parseAsync(req.body);
+        next();
     }
     catch (err) {
         next(err);

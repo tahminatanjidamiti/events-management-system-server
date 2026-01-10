@@ -55,6 +55,19 @@ const getEvent = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 
         data: result,
     });
 }));
+const myEvents = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = req.user;
+    const filters = (0, pick_1.default)(req.query, event_constant_1.eventFilterableFields);
+    const options = (0, pick_1.default)(req.query, ["page", "limit", "sortBy", "sortOrder"]);
+    const result = yield event_service_1.EventService.myEvents(user, filters, options);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: "Events fetched successfully",
+        meta: result.meta,
+        data: result.data,
+    });
+}));
 const listEvents = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const filters = (0, pick_1.default)(req.query, event_constant_1.eventFilterableFields);
     const options = (0, pick_1.default)(req.query, ["page", "limit", "sortBy", "sortOrder"]);
@@ -81,6 +94,7 @@ exports.EventController = {
     updateEvent,
     getAISuggestions,
     getEvent,
+    myEvents,
     listEvents,
     deleteEvent,
 };

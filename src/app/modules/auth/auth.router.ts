@@ -13,6 +13,10 @@ router.post(
     AuthController.authWithGoogle
 )
 router.post(
+    '/refresh-token',
+    AuthController.refreshToken
+)
+router.post(
     '/forgot-password',
     AuthController.forgotPassword
 );

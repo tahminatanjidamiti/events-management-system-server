@@ -17,8 +17,12 @@ const loginWithEmailAndPassword = async ({ email, password }: { email: string, p
 
     const isPasswordMatched = await bcryptjs.compare(password, user.password as string);
     if (!isPasswordMatched) throw new Error("Password does not match!");
+    const accessToken = jwtHelper.generateToken({ id: user.id, email: user.email, role: user.role }, config.jwt.jwt_secret as Secret, config.jwt.expires_in as string);
 
+    const refreshToken = jwtHelper.generateToken({id: user.id, email: user.email, role: user.role }, config.jwt.refresh_token_secret as Secret, config.jwt.refresh_token_expires_in as string);
     return {
+        accessToken,
+        refreshToken,
         id: user.id,
         fullName: user.fullName,
         email: user.email,
@@ -51,7 +55,7 @@ const authWithGoogle = async (data: Prisma.UserCreateInput) => {
             }
         });
     }
-
+    
     return {
         id: user.id,
         fullName: user.fullName,
@@ -69,7 +73,37 @@ const authWithGoogle = async (data: Prisma.UserCreateInput) => {
     };
 }
 
+const refreshToken = async (token: string) => {
+    let decodedData;
+    try {
+        decodedData = jwtHelper.verifyToken(token, config.jwt.refresh_token_secret as Secret);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    catch (err) {
+        throw new Error("You are not authorized!")
+    }
 
+    const userData = await prisma.user.findUniqueOrThrow({
+        where: {
+            email: decodedData.email,
+            status: UserStatus.ACTIVE
+        }
+    });
+
+    const accessToken = jwtHelper.generateToken({
+        id: userData.id,
+        email: userData.email,
+        role: userData.role
+    },
+        config.jwt.jwt_secret as Secret,
+        config.jwt.expires_in as string
+    );
+
+    return {
+        accessToken
+    };
+
+};
 const forgotPassword = async (payload: { email: string }) => {
     const userData = await prisma.user.findUniqueOrThrow({
         where: {
@@ -79,7 +113,7 @@ const forgotPassword = async (payload: { email: string }) => {
     });
 
     const resetPassToken = jwtHelper.generateToken(
-        { email: userData.email, role: userData.role },
+        { id: userData.id, email: userData.email, role: userData.role },
         config.jwt.reset_pass_secret as Secret,
         config.jwt.reset_pass_token_expires_in as string
     )
@@ -136,6 +170,7 @@ const resetPassword = async (token: string, payload: { id: string, password: str
 export const AuthService = {
     loginWithEmailAndPassword,
     authWithGoogle,
+    refreshToken,
     forgotPassword,
     resetPassword,
 }

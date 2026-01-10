@@ -10,18 +10,13 @@ const user_validation_1 = require("./user.validation");
 const fileUploader_1 = require("../../helper/fileUploader");
 const auth_1 = __importDefault(require("../../middlewares/auth"));
 const client_1 = require("@prisma/client");
+const validateRequest_1 = __importDefault(require("../../middlewares/validateRequest"));
 const router = express_1.default.Router();
 // CREATE USER
+router.get("/:id", user_controller_1.UserController.getUserById);
 router.get('/me', user_controller_1.UserController.getMyProfile);
 router.get("/", user_controller_1.UserController.getAllUsers);
-router.get("/:id", user_controller_1.UserController.getUserById);
 router.delete("/:id", (0, auth_1.default)(client_1.Role.ADMIN), user_controller_1.UserController.deleteUser);
-router.post("/register", fileUploader_1.fileUploader.upload.single("file"), (req, res, next) => {
-    req.body = user_validation_1.UserValidation.createUserValidationSchema.parse(JSON.parse(req.body.data));
-    return user_controller_1.UserController.createUser(req, res, next);
-});
-router.patch("/:id", (0, auth_1.default)(client_1.Role.ADMIN, client_1.Role.HOST, client_1.Role.USER), fileUploader_1.fileUploader.upload.single("file"), (req, res, next) => {
-    req.body = user_validation_1.UserValidation.updateUserValidationSchema.parse(JSON.parse(req.body.data));
-    return user_controller_1.UserController.updateUser(req, res, next);
-});
+router.post("/register", fileUploader_1.fileUploader.upload.single("file"), (0, validateRequest_1.default)(user_validation_1.UserValidation.createUserValidationSchema), user_controller_1.UserController.createUser);
+router.patch("/:id", fileUploader_1.fileUploader.upload.single("file"), (0, validateRequest_1.default)(user_validation_1.UserValidation.updateUserValidationSchema), (0, auth_1.default)(client_1.Role.ADMIN, client_1.Role.HOST, client_1.Role.USER), user_controller_1.UserController.updateUser);
 exports.UserRoutes = router;

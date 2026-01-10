@@ -9,30 +9,16 @@ const social_controller_1 = require("./social.controller");
 const auth_1 = __importDefault(require("../../middlewares/auth"));
 const client_1 = require("@prisma/client");
 const social_validation_1 = require("./social.validation");
+const validateRequest_1 = __importDefault(require("../../middlewares/validateRequest"));
 const router = express_1.default.Router();
-router.post("/friend", (0, auth_1.default)(client_1.Role.USER), (req, res, next) => {
-    req.body = social_validation_1.SendFriendRequestSchema.parse(req.body);
-    next();
-}, social_controller_1.SocialController.sendFriendRequest);
-router.patch("/friend", (0, auth_1.default)(client_1.Role.USER), (req, res, next) => {
-    req.body = social_validation_1.FriendActionSchema.parse(req.body);
-    next();
-}, social_controller_1.SocialController.handleFriendAction);
+router.post("/friend", (0, validateRequest_1.default)(social_validation_1.SendFriendRequestSchema), (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.sendFriendRequest);
+router.patch("/friend", (0, validateRequest_1.default)(social_validation_1.FriendActionSchema), (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.handleFriendAction);
 router.get("/friend", (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.listFriendRequests);
-router.post("/follow", (0, auth_1.default)(client_1.Role.USER), (req, res, next) => {
-    req.body = social_validation_1.FollowSchema.parse(req.body);
-    next();
-}, social_controller_1.SocialController.followUser);
+router.post("/follow", (0, validateRequest_1.default)(social_validation_1.FollowSchema), (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.followUser);
 router.get("/follow", (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.listFollows);
-router.post("/save", (0, auth_1.default)(client_1.Role.USER), (req, res, next) => {
-    req.body = social_validation_1.SaveEventSchema.parse(req.body);
-    next();
-}, social_controller_1.SocialController.toggleSaveEvent);
+router.post("/save", (0, validateRequest_1.default)(social_validation_1.SaveEventSchema), (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.toggleSaveEvent);
 router.get("/save", (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.listSavedEvents);
-router.post("/review", (0, auth_1.default)(client_1.Role.USER), (req, res, next) => {
-    req.body = social_validation_1.CreateReviewSchema.parse(req.body);
-    next();
-}, social_controller_1.SocialController.createReview);
+router.post("/review", (0, validateRequest_1.default)(social_validation_1.CreateReviewSchema), (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.createReview);
 router.get("/review", social_controller_1.SocialController.listReviews);
 router.get("/notifications", (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.listNotifications);
 router.patch("/notifications/:id/read", (0, auth_1.default)(client_1.Role.USER), social_controller_1.SocialController.markNotificationRead);

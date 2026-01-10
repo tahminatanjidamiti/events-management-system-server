@@ -5,7 +5,7 @@ import httpStatus from "http-status";
 import { EventService } from "./event.service";
 import pick from "../../helper/pick";
 import { eventFilterableFields } from "./event.constant";
-
+import { IUser } from "../user/user.interface";
 
 const createEvent = catchAsync(
   async (req: Request, res: Response) => {
@@ -49,6 +49,19 @@ const getEvent = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const myEvents = catchAsync(async (req: Request& { user?: IUser}, res: Response) => {
+  const user = req.user as IUser;
+  const filters = pick(req.query, eventFilterableFields);
+  const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
+  const result = await EventService.myEvents(user,filters, options);
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Events fetched successfully",
+    meta: result.meta,
+    data: result.data,
+  });
+});
 const listEvents = catchAsync(async (req: Request, res: Response) => {
   const filters = pick(req.query, eventFilterableFields);
   const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
@@ -77,6 +90,7 @@ export const EventController = {
   updateEvent,
   getAISuggestions,
   getEvent,
+  myEvents,
   listEvents,
   deleteEvent,
 };

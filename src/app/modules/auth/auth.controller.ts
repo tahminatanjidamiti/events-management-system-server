@@ -5,7 +5,19 @@ import sendResponse from "../../shared/sendResponse";
 import httpStatus from "http-status";
 
 const loginWithEmailAndPassword = async (req: Request, res: Response) => {
-        const result = await AuthService.loginWithEmailAndPassword(req.body)
+    const result = await AuthService.loginWithEmailAndPassword(req.body)
+    const { accessToken, refreshToken } = result;
+
+    res.cookie("accessToken", accessToken, {
+        secure: true,
+        httpOnly: true,
+        sameSite: "none",
+    })
+    res.cookie("refreshToken", refreshToken, {
+        secure: true,
+        httpOnly: true,
+        sameSite: "none",
+    })
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -19,17 +31,48 @@ const loginWithEmailAndPassword = async (req: Request, res: Response) => {
 
 const authWithGoogle = async (req: Request, res: Response) => {
 
-        const result = await AuthService.authWithGoogle(req.body)
-   sendResponse(res, {
+    const result = await AuthService.authWithGoogle(req.body)
+
+    sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
         message: "User loggedin successfully!",
         data: {
-            result
-        }
+            id: result.id,
+            fullName: result.fullName,
+            email: result.email,
+            role: result.role,
+            picture: result.picture,
+            phone: result.phone,
+            status: result.status,
+            isVerified: result.isVerified,
+            bio: result.bio,
+            interests: result.interests,
+            city: result.city,
+            avgRating: result.avgRating,
+            reviewCount: result.reviewCount,
+        },
     })
 }
+const refreshToken = catchAsync(async (req: Request, res: Response) => {
+    const { refreshToken } = req.cookies;
 
+    const result = await AuthService.refreshToken(refreshToken);
+    res.cookie("accessToken", result.accessToken, {
+        secure: true,
+        httpOnly: true,
+        sameSite: "none",
+    });
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Access token genereated successfully!",
+        data: {
+            message: "Access token genereated successfully!",
+        },
+    });
+});
 const forgotPassword = catchAsync(async (req: Request, res: Response) => {
     await AuthService.forgotPassword(req.body);
 
@@ -58,6 +101,7 @@ const resetPassword = catchAsync(async (req: Request, res: Response) => {
 export const AuthController = {
     loginWithEmailAndPassword,
     authWithGoogle,
+    refreshToken,
     resetPassword,
     forgotPassword,
 }

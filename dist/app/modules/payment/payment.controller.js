@@ -18,8 +18,9 @@ const sendResponse_1 = __importDefault(require("../../shared/sendResponse"));
 const http_status_1 = __importDefault(require("http-status"));
 const payment_service_1 = require("./payment.service");
 const createCheckoutSession = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId, eventId } = req.body;
-    const result = yield payment_service_1.PaymentService.createPaymentSession(userId, eventId);
+    const { eventId } = req.body;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const result = yield payment_service_1.PaymentService.createPaymentSession(req.user.id, eventId);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,

@@ -31,7 +31,16 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const prisma_1 = require("../../shared/prisma");
 const fileUploader_1 = require("../../helper/fileUploader");
 const config_1 = __importDefault(require("../../config"));
+const http_status_1 = __importDefault(require("http-status"));
+const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const createUser = (req) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email } = req.body;
+    const existingUser = yield prisma_1.prisma.user.findUnique({
+        where: { email },
+    });
+    if (existingUser) {
+        throw new ApiError_1.default(http_status_1.default.CONFLICT, "Email already exists");
+    }
     if (req.file) {
         const uploadResult = yield fileUploader_1.fileUploader.uploadToCloudinary(req.file);
         req.body.picture = uploadResult === null || uploadResult === void 0 ? void 0 : uploadResult.secure_url;
@@ -80,11 +89,24 @@ const getAllUsers = (params, options) => __awaiter(void 0, void 0, void 0, funct
 const getUserById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     return prisma_1.prisma.user.findUnique({
         where: { id },
-        include: {
-            hostProfile: true,
+        select: {
+            id: true,
+            fullName: true,
+            email: true,
+            role: true,
+            interests: true,
+            phone: true,
+            picture: true,
+            status: true,
+            isVerified: true,
+            bio: true,
+            city: true,
+            avgRating: true,
+            reviewCount: true,
             followers: true,
             following: true,
-        },
+            hostProfile: true,
+        }
     });
 });
 const getMyProfile = (user) => __awaiter(void 0, void 0, void 0, function* () {

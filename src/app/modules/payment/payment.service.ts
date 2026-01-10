@@ -26,44 +26,42 @@ const createPaymentSession = async (userId: string, eventId: string) => {
     throw new ApiError(httpStatus.BAD_REQUEST, "Already joined this event");
   }
 
-  const transactionId = uuidv4();
+ const transactionId = uuidv4();
 
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    mode: "payment",
-    customer_email: (
-      await prisma.user.findUnique({ where: { id: userId } })
-    )?.email,
-    line_items: [
-      {
-        price_data: {
-          currency: "bdt",
-          product_data: { name: event.title },
-          unit_amount: Math.round(event.joiningFee * 100),
-        },
-        quantity: 1,
+const payment = await prisma.payment.create({
+  data: {
+    amount: event.joiningFee,
+    transactionId,
+    method: "stripe",
+    status: PaymentStatus.UNPAID,
+    userId,
+    eventId,
+  },
+});
+const session = await stripe.checkout.sessions.create({
+  payment_method_types: ["card"],
+  mode: "payment",
+  customer_email: (
+    await prisma.user.findUnique({ where: { id: userId } })
+  )?.email,
+  line_items: [
+    {
+      price_data: {
+        currency: "bdt",
+        product_data: { name: event.title },
+        unit_amount: Math.round(event.joiningFee * 100),
       },
-    ],
-    metadata: {
-      userId,
-      eventId,
-      transactionId,
+      quantity: 1,
     },
-    success_url: `${config.frontend_url}/payment-success`,
-    cancel_url: `${config.frontend_url}/payment-cancel`,
-  });
-
-  const payment = await prisma.payment.create({
-    data: {
-      amount: event.joiningFee,
-      transactionId,
-      method: "stripe",
-      status: PaymentStatus.UNPAID,
-      paymentGatewayData: { sessionId: session.id },
-      userId,
-      eventId,
-    },
-  });
+  ],
+  metadata: {
+    paymentId: payment.id,
+    userId,
+    eventId,
+  },
+  success_url: `${config.frontend_url}/payment-success`,
+  cancel_url: `${config.frontend_url}/payment-cancel`,
+});
 
   return { url: session.url, payment };
 };
@@ -71,19 +69,15 @@ const createPaymentSession = async (userId: string, eventId: string) => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleStripeCheckoutCompleted = async (session: any) => {
-  const { userId, eventId, transactionId } = session.metadata;
+  const { paymentId, userId, eventId } = session.metadata;
 
-  const payment = await prisma.payment.findUnique({
-    where: { transactionId },
-  });
-
-  if (!payment) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Payment not found");
+  if (!paymentId) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Missing paymentId in metadata");
   }
 
   await prisma.$transaction(async (tx) => {
     await tx.payment.update({
-      where: { id: payment.id },
+      where: { id: paymentId },
       data: {
         status: PaymentStatus.PAID,
         paymentGatewayData: session,
@@ -115,7 +109,6 @@ const handleStripeCheckoutCompleted = async (session: any) => {
 
   return true;
 };
-
 const cancelUnpaidPayments = async () => {
   const cutoff = new Date(Date.now() - 30 * 60 * 1000);
 

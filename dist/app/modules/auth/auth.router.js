@@ -9,6 +9,7 @@ const auth_controller_1 = require("./auth.controller");
 const router = express_1.default.Router();
 router.post("/login", auth_controller_1.AuthController.loginWithEmailAndPassword);
 router.post("/google", auth_controller_1.AuthController.authWithGoogle);
+router.post('/refresh-token', auth_controller_1.AuthController.refreshToken);
 router.post('/forgot-password', auth_controller_1.AuthController.forgotPassword);
 router.post('/reset-password', auth_controller_1.AuthController.resetPassword);
 exports.AuthRoutes = router;

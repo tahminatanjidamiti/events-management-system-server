@@ -3,39 +3,17 @@ import { HostController } from "./host.controller";
 import auth from "../../middlewares/auth";
 import { Role } from "@prisma/client";
 import { HostValidation } from "./host.validation";
+import validateRequest from "../../middlewares/validateRequest";
 
 const router = express.Router();
-router.get("/", HostController.getAllHosts);
-router.post(
-  "/request",
-  auth(Role.USER),
-  (req, res, next) => {
-    req.body = HostValidation.createHostSchema.parse(req.body);
-    next();
-  },
-  HostController.requestHost
-);
+router.get("/", auth(Role.ADMIN), HostController.getAllHosts);
+router.post("/request", validateRequest(HostValidation.createHostSchema), auth(Role.USER), HostController.requestHost);
 
-router.patch(
-  "/:id",
-  auth(Role.HOST),
-  (req, res, next) => {
-    req.body = HostValidation.updateHostSchema.parse(req.body);
-    next();
-  },
-  HostController.updateHost
-);
 router.patch(
   "/approve/:id",
-  auth(Role.ADMIN),
-  (req, res, next) => {
-    req.body = HostValidation.approvedHostSchema.parse(req.body);
-    next();
-  },
-  HostController.approveHost
+  validateRequest(HostValidation.approvedHostSchema),
+  auth(Role.ADMIN), HostController.approveHost);
+router.patch("/:id",  validateRequest(HostValidation.updateHostSchema), auth(Role.HOST), HostController.updateHost
 );
-
-
-
 
 export const HostRoutes = router;

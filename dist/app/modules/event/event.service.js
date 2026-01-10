@@ -74,7 +74,7 @@ const updateEvent = (eventId, req) => __awaiter(void 0, void 0, void 0, function
         data.location = data.location;
     return prisma_1.prisma.event.update({
         where: { id: eventId },
-        data,
+        data: data,
     });
 });
 const getAISuggestions = (payload) => __awaiter(void 0, void 0, void 0, function* () {
@@ -223,6 +223,61 @@ const getEventById = (id) => __awaiter(void 0, void 0, void 0, function* () {
         },
     });
 });
+const myEvents = (user, filters, options) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page, limit, skip, sortBy, sortOrder } = paginationHelper_1.paginationHelper.calculatePagination(options);
+    const { searchTerm } = filters, filterData = __rest(filters, ["searchTerm"]);
+    const andConditions = [];
+    if (searchTerm) {
+        andConditions.push({
+            OR: event_constant_1.eventSearchableFields.map((field) => ({
+                [field]: { contains: searchTerm, mode: "insensitive" },
+            })),
+        });
+    }
+    if (Object.keys(filterData).length > 0) {
+        andConditions.push({
+            AND: Object.keys(filterData).map((key) => ({
+                [key]: { equals: filterData[key] },
+            })),
+        });
+    }
+    if (user.role === "HOST") {
+        andConditions.push({
+            hostId: user.id,
+        });
+    }
+    if (user.role === "USER") {
+        andConditions.push({
+            participants: {
+                some: {
+                    userId: user.id,
+                },
+            },
+        });
+    }
+    const where = andConditions.length > 0 ? { AND: andConditions } : {};
+    const data = yield prisma_1.prisma.event.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: sortBy ? { [sortBy]: sortOrder } : { createdAt: "desc" },
+        include: {
+            host: {
+                select: {
+                    id: true,
+                    fullName: true,
+                    picture: true,
+                },
+            },
+            participants: true,
+        },
+    });
+    const total = yield prisma_1.prisma.event.count({ where });
+    return {
+        meta: { page, limit, total },
+        data,
+    };
+});
 const listEvents = (filters, options) => __awaiter(void 0, void 0, void 0, function* () {
     const { page, limit, skip, sortBy, sortOrder } = paginationHelper_1.paginationHelper.calculatePagination(options);
     const { searchTerm } = filters, filterData = __rest(filters, ["searchTerm"]);
@@ -263,6 +318,7 @@ exports.EventService = {
     updateEvent,
     getAISuggestions,
     getEventById,
+    myEvents,
     listEvents,
     deleteEvent,
 };

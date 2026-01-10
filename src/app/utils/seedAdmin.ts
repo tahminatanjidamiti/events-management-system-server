@@ -15,7 +15,7 @@ export const seedAdmin = async () => {
     }
 
     const hashedPassword = await bcryptjs.hash(
-      config.admin.admin_email as string,
+      config.admin.admin_password as string,
       Number(config.salt_round)
     );
 
