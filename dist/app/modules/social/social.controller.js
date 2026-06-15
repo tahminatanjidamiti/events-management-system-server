@@ -29,9 +29,17 @@ const handleFriendAction = (0, catchAsync_1.default)((req, res) => __awaiter(voi
 }));
 const listFriendRequests = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const filters = (0, pick_1.default)(req.query, social_constant_1.friendFilterableFields);
+    if (req.user)
+        filters.receiverId = req.user.id;
     const options = (0, pick_1.default)(req.query, ["page", "limit", "sortBy", "sortOrder"]);
     const result = yield social_service_1.SocialService.listFriendRequests(filters, options);
-    (0, sendResponse_1.default)(res, { statusCode: http_status_1.default.OK, success: true, message: "Friend requests", meta: result.meta, data: result.data });
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: "Friend requests",
+        meta: result.meta,
+        data: result.data,
+    });
 }));
 const followUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield social_service_1.SocialService.followUser(req.user.id, req.body);
@@ -43,15 +51,19 @@ const listFollows = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
     const result = yield social_service_1.SocialService.listFollows(filters, options);
     (0, sendResponse_1.default)(res, { statusCode: http_status_1.default.OK, success: true, message: "Follows", meta: result.meta, data: result.data });
 }));
-const toggleSaveEvent = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield social_service_1.SocialService.toggleSaveEvent(req.user.id, req.body);
-    (0, sendResponse_1.default)(res, { statusCode: http_status_1.default.OK, success: true, message: "Saved event toggled", data: result });
-}));
 const listSavedEvents = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const filters = (0, pick_1.default)(req.query, social_constant_1.savedEventFilterableFields);
+    if (req.user)
+        filters.userId = req.user.id;
     const options = (0, pick_1.default)(req.query, ["page", "limit", "sortBy", "sortOrder"]);
     const result = yield social_service_1.SocialService.listSavedEvents(filters, options);
-    (0, sendResponse_1.default)(res, { statusCode: http_status_1.default.OK, success: true, message: "Saved events", meta: result.meta, data: result.data });
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_1.default.OK,
+        success: true,
+        message: "Saved events",
+        meta: result.meta,
+        data: result.data,
+    });
 }));
 const createReview = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield social_service_1.SocialService.createReview(req.user.id, req.body);
@@ -65,8 +77,7 @@ const listReviews = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
 }));
 const listNotifications = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const filters = (0, pick_1.default)(req.query, social_constant_1.notificationFilterableFields);
-    // ensure only user's notifications when not admin
-    if (!filters.userId && req.user)
+    if (req.user)
         filters.userId = req.user.id;
     const options = (0, pick_1.default)(req.query, ["page", "limit", "sortBy", "sortOrder"]);
     const result = yield social_service_1.SocialService.listNotifications(filters, options);
@@ -82,7 +93,6 @@ exports.SocialController = {
     listFriendRequests,
     followUser,
     listFollows,
-    toggleSaveEvent,
     listSavedEvents,
     createReview,
     listReviews,

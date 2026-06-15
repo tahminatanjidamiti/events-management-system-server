@@ -1,7 +1,9 @@
 import compression from "compression";
+import helmet from "helmet";
 import cors from "cors";
 import cookieParser from 'cookie-parser'
 import express, { Application } from "express";
+import expressSession from "express-session";
 import cron from 'node-cron';
 import config from "./app/config";
 import { PaymentService } from "./app/modules/payment/payment.service";
@@ -12,15 +14,21 @@ import router from "./app/routes";
 
 
 const app: Application = express();
+app.use(expressSession({
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  secret: config.express_session_secret!,
+  resave: false,
+  saveUninitialized: false,
+}))
 app.post(
     "/webhook",
     express.raw({ type: "application/json" }),
     paymentWebhookHandler
 );
 // Middleware
-app.use(cors()); 
 app.use(compression()); // Compresses response bodies for faster delivery
 app.use(express.json());
+app.set("trust proxy", 1);
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 cron.schedule('* * * * *', () => {
@@ -32,14 +40,13 @@ cron.schedule('* * * * *', () => {
         console.error(err);
     }
 });
-
+app.use(helmet());
 app.use(
   cors({
     origin: config.frontend_url,
     credentials: true,
   })
 );
-
 app.use("/api/v1", router);
 app.get("/", (_req, res) => {
   res.send("API is running!!");

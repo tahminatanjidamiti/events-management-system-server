@@ -28,6 +28,11 @@ const createCheckoutSession = (0, catchAsync_1.default)((req, res) => __awaiter(
         data: result,
     });
 }));
+const getSession = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield payment_service_1.PaymentService.getSession(req.params.transactionId);
+    (0, sendResponse_1.default)(res, { statusCode: 200, success: true, message: "Session fetched", data: result });
+}));
 exports.PaymentController = {
     createCheckoutSession,
+    getSession
 };

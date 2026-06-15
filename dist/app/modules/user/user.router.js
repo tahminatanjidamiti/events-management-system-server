@@ -18,5 +18,5 @@ router.get('/me', user_controller_1.UserController.getMyProfile);
 router.get("/", user_controller_1.UserController.getAllUsers);
 router.delete("/:id", (0, auth_1.default)(client_1.Role.ADMIN), user_controller_1.UserController.deleteUser);
 router.post("/register", fileUploader_1.fileUploader.upload.single("file"), (0, validateRequest_1.default)(user_validation_1.UserValidation.createUserValidationSchema), user_controller_1.UserController.createUser);
-router.patch("/:id", fileUploader_1.fileUploader.upload.single("file"), (0, validateRequest_1.default)(user_validation_1.UserValidation.updateUserValidationSchema), (0, auth_1.default)(client_1.Role.ADMIN, client_1.Role.HOST, client_1.Role.USER), user_controller_1.UserController.updateUser);
+router.patch("/:id", (0, auth_1.default)(client_1.Role.ADMIN, client_1.Role.HOST, client_1.Role.USER), fileUploader_1.fileUploader.upload.single("file"), (0, validateRequest_1.default)(user_validation_1.UserValidation.updateUserValidationSchema), user_controller_1.UserController.updateUser);
 exports.UserRoutes = router;

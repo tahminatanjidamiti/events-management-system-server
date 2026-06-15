@@ -19,23 +19,25 @@ const loginWithEmailAndPassword = async ({ email, password }: { email: string, p
     if (!isPasswordMatched) throw new Error("Password does not match!");
     const accessToken = jwtHelper.generateToken({ id: user.id, email: user.email, role: user.role }, config.jwt.jwt_secret as Secret, config.jwt.expires_in as string);
 
-    const refreshToken = jwtHelper.generateToken({id: user.id, email: user.email, role: user.role }, config.jwt.refresh_token_secret as Secret, config.jwt.refresh_token_expires_in as string);
+    const refreshToken = jwtHelper.generateToken({ id: user.id, email: user.email, role: user.role }, config.jwt.refresh_token_secret as Secret, config.jwt.refresh_token_expires_in as string);
     return {
         accessToken,
         refreshToken,
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        interests: user.interests,
-        phone: user.phone ?? null,
-        picture: user.picture ?? null,
-        status: user.status,
-        isVerified: user.isVerified,
-        bio: user.bio ?? null,
-        city: user.city ?? null,
-        avgRating: user.avgRating,
-        reviewCount: user.reviewCount,
+        user: {
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            role: user.role,
+            interests: user.interests,
+            phone: user.phone ?? null,
+            picture: user.picture ?? null,
+            status: user.status,
+            isVerified: user.isVerified,
+            bio: user.bio ?? null,
+            city: user.city ?? null,
+            avgRating: user.avgRating,
+            reviewCount: user.reviewCount,
+        }
     };
 };
 
@@ -55,21 +57,29 @@ const authWithGoogle = async (data: Prisma.UserCreateInput) => {
             }
         });
     }
-    
+
+    const accessToken = jwtHelper.generateToken({ id: user.id, email: user.email, role: user.role }, config.jwt.jwt_secret as Secret, config.jwt.expires_in as string);
+
+    const refreshToken = jwtHelper.generateToken({ id: user.id, email: user.email, role: user.role }, config.jwt.refresh_token_secret as Secret, config.jwt.refresh_token_expires_in as string);
+
     return {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        interests: user.interests,
-        phone: user.phone ?? null,
-        picture: user.picture ?? null,
-        status: user.status,
-        isVerified: user.isVerified,
-        bio: user.bio ?? null,
-        city: user.city ?? null,
-        avgRating: user.avgRating,
-        reviewCount: user.reviewCount,
+        accessToken,
+        refreshToken,
+        user: {
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            role: user.role,
+            interests: user.interests,
+            phone: user.phone ?? null,
+            picture: user.picture ?? null,
+            status: user.status,
+            isVerified: user.isVerified,
+            bio: user.bio ?? null,
+            city: user.city ?? null,
+            avgRating: user.avgRating,
+            reviewCount: user.reviewCount,
+        }
     };
 }
 
@@ -119,7 +129,6 @@ const forgotPassword = async (payload: { email: string }) => {
     )
 
     const resetPassLink = config.reset_pass_link + `?userId=${userData.id}&token=${resetPassToken}`
-
     await emailSender(
         userData.email,
         "Reset Password Link",

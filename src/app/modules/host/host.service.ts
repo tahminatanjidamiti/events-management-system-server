@@ -5,7 +5,7 @@ import { HostUpdateStatus, Role } from "@prisma/client";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const requestToBecomeHost = async (id: string, payload: any) => {
-  
+
   const existing = await prisma.host.findUnique({
     where: { id },
   });
@@ -70,11 +70,35 @@ const getAllHosts = async () => {
     orderBy: { createdAt: "desc" },
   });
 };
-
+const getHostById = async (id: string) => {
+  return prisma.host.findUnique({
+    where: { id },
+    include: {
+      user: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          role: true,
+          interests: true,
+          phone: true,
+          picture: true,
+          status: true,
+          isVerified: true,
+          bio: true,
+          city: true,
+          avgRating: true,
+          reviewCount: true,
+        },
+      },
+    },
+  });
+};
 
 export const HostService = {
   requestToBecomeHost,
   updateHost,
   approveHost,
   getAllHosts,
+  getHostById
 };

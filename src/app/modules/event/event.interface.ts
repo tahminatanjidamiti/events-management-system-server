@@ -8,7 +8,7 @@ export interface IEventCreate {
   title: string;
   eventType?: string | null;
   description: string;
-  hostId: string;
+  hostId?: string;
   minParticipants?: number | null;
   maxParticipants?: number | null;
   image?: string | null;

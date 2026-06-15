@@ -2,22 +2,20 @@ import express from "express";
 import { SocialController } from "./social.controller";
 import auth from "../../middlewares/auth";
 import { Role } from "@prisma/client";
-import { SendFriendRequestSchema, FriendActionSchema, FollowSchema, SaveEventSchema, CreateReviewSchema } from "./social.validation";
+import { SendFriendRequestSchema, FriendActionSchema, FollowSchema, CreateReviewSchema } from "./social.validation";
 import validateRequest from "../../middlewares/validateRequest";
 
 const router = express.Router();
 
-router.post("/friend", validateRequest(SendFriendRequestSchema), auth(Role.USER), SocialController.sendFriendRequest);
+router.post("/friend", auth(Role.USER), validateRequest(SendFriendRequestSchema), SocialController.sendFriendRequest);
 
-router.patch("/friend", validateRequest(FriendActionSchema), auth(Role.USER), SocialController.handleFriendAction);
+router.patch("/friend", auth(Role.USER), validateRequest(FriendActionSchema), SocialController.handleFriendAction);
 
 router.get("/friend", auth(Role.USER), SocialController.listFriendRequests);
 
-router.post("/follow", validateRequest(FollowSchema), auth(Role.USER), SocialController.followUser);
+router.post("/follow", auth(Role.USER), validateRequest(FollowSchema), SocialController.followUser);
 
 router.get("/follow", auth(Role.USER), SocialController.listFollows);
-
-router.post("/save", validateRequest (SaveEventSchema), auth(Role.USER), SocialController.toggleSaveEvent);
 
 router.get("/save", auth(Role.USER), SocialController.listSavedEvents);
 

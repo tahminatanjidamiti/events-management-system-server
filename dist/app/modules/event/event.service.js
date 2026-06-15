@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.EventService = void 0;
+exports.EventService = exports.getAISuggestions = void 0;
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const prisma_1 = require("../../shared/prisma");
@@ -35,32 +35,46 @@ const fileUploader_1 = require("../../helper/fileUploader");
 const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const extractJsonFromMessage_1 = require("../../helper/extractJsonFromMessage");
 const open_router_1 = require("../../helper/open-router");
-const createEvent = (req) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d, _e;
+const createEvent = (user, req) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e, _f;
+    const host = yield prisma_1.prisma.host.findUnique({ where: { userId: user.id } });
+    if (!host)
+        throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "Host profile not found.");
+    const hostId = user.id;
     if (req.file) {
         const uploadResult = yield fileUploader_1.fileUploader.uploadToCloudinary(req.file);
         req.body.image = uploadResult === null || uploadResult === void 0 ? void 0 : uploadResult.secure_url;
     }
     const payload = req.body;
-    const created = yield prisma_1.prisma.event.create({
-        data: {
-            title: payload.title,
-            eventType: (_a = payload.eventType) !== null && _a !== void 0 ? _a : null,
-            description: payload.description,
-            hostId: payload.hostId,
-            minParticipants: (_b = payload.minParticipants) !== null && _b !== void 0 ? _b : null,
-            maxParticipants: (_c = payload.maxParticipants) !== null && _c !== void 0 ? _c : null,
-            image: (_d = payload.image) !== null && _d !== void 0 ? _d : null,
-            location: payload.location,
-            startDate: new Date(payload.startDate),
-            endDate: new Date(payload.endDate),
-            joiningFee: (_e = payload.joiningFee) !== null && _e !== void 0 ? _e : 0,
-            status: client_1.EventStatus.OPEN,
-        },
-    });
-    return created;
+    try {
+        const created = yield prisma_1.prisma.event.create({
+            data: {
+                title: payload.title,
+                eventType: (_a = payload.eventType) !== null && _a !== void 0 ? _a : null,
+                description: payload.description,
+                hostId: hostId,
+                minParticipants: (_b = payload.minParticipants) !== null && _b !== void 0 ? _b : null,
+                maxParticipants: (_c = payload.maxParticipants) !== null && _c !== void 0 ? _c : null,
+                image: (_d = payload.image) !== null && _d !== void 0 ? _d : null,
+                location: (_e = payload.location) !== null && _e !== void 0 ? _e : {},
+                startDate: new Date(payload.startDate),
+                endDate: new Date(payload.endDate),
+                joiningFee: (_f = payload.joiningFee) !== null && _f !== void 0 ? _f : 0,
+                status: client_1.EventStatus.OPEN,
+            },
+        });
+        return created;
+    }
+    catch (err) {
+        console.error("Prisma error →", err);
+        throw err;
+    }
 });
-const updateEvent = (eventId, req) => __awaiter(void 0, void 0, void 0, function* () {
+const updateEvent = (eventId, user, req) => __awaiter(void 0, void 0, void 0, function* () {
+    const host = yield prisma_1.prisma.host.findUnique({ where: { userId: user.id } });
+    if (!host)
+        throw new Error("Host profile not found. Please register as a host first.");
+    const hostId = user.id;
     if (req.file) {
         const uploadResult = yield fileUploader_1.fileUploader.uploadToCloudinary(req.file);
         req.body.image = uploadResult === null || uploadResult === void 0 ? void 0 : uploadResult.secure_url;
@@ -72,132 +86,197 @@ const updateEvent = (eventId, req) => __awaiter(void 0, void 0, void 0, function
         data.endDate = new Date(data.endDate);
     if (data.location)
         data.location = data.location;
+    data.hostId = hostId;
     return prisma_1.prisma.event.update({
         where: { id: eventId },
         data: data,
     });
 });
 const getAISuggestions = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e;
     if (!(payload === null || payload === void 0 ? void 0 : payload.interests) || payload.interests.length === 0) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Interests are required!");
     }
-    // Only fetch useful fields for better AI accuracy
-    const events = yield prisma_1.prisma.event.findMany({
+    const rawEvents = yield prisma_1.prisma.event.findMany({
         where: {
-            status: "OPEN", // Only open events
-            endDate: { gte: new Date() }, // Not ended
+            status: "OPEN",
+            endDate: { gte: new Date() },
+            eventType: {
+                in: payload.interests,
+            },
         },
-        include: {
+        select: {
+            id: true,
+            title: true,
+            eventType: true,
+            description: true,
+            location: true,
+            startDate: true,
+            joiningFee: true,
+            minParticipants: true,
+            maxParticipants: true,
+            status: true,
             host: {
-                include: {
-                    hostProfile: true,
+                select: {
+                    id: true,
+                    fullName: true,
+                    avgRating: true,
+                    reviewCount: true,
+                    hostProfile: {
+                        select: { status: true },
+                    },
                 },
             },
-            participants: true,
-            reviews: true,
-            savedBy: true,
+            _count: {
+                select: { participants: true },
+            },
         },
+        take: 20,
     });
-    console.log("events data loaded.......\n");
-    // -------------------------------
-    // 🎯 BEST Structured Prompt
-    // -------------------------------
-    const prompt = `
-You are an intelligent event recommendation assistant.
-Your job is to recommend the **top 3 most relevant events** for a user based on their interests.
-
-### User interests:
-${JSON.stringify(payload.interests, null, 2)}
-
-### Event schema details:
-Each event contains:
-- eventType: string
-- location: { city, address, coordinates }
-- status: OPEN | FULL | COMPLETED | CANCELLED
-- host with Host status (APPROVED / PENDING)
-- participants count
-- minParticipants / maxParticipants
-- joiningFee
-- date range
-
-### IMPORTANT RULES:
-1. Only suggest events with:
-   - status = OPEN
-   - host.status = APPROVED (if host exists)
-   - event not FULL (maxParticipants > current participants)
-2. Match the eventType or description with interests.
-3. Prefer:
-   - events in similar locations
-   - events with good reviews
-   - active hosts (avgRating, reviewCount)
-4. Do not suggest irrelevant events.
-
-### Events dataset (JSON):
-${JSON.stringify(events, null, 2)}
-
-### OUTPUT FORMAT (STRICT JSON):
-{
-  "suggestedEvents": [
-    {
-      "id": "",
-      "title": "",
-      "eventType": "",
-      "relevanceScore": 0-100,
-      "reason": "",
-      "host": {
-        "id": "",
-        "fullName": "",
-        "avgRating": 0,
-        "reviewCount": 0
-      },
-      "location": {},
-      "startDate": "",
-      "joiningFee": 0
+    let events = rawEvents;
+    if (events.length === 0) {
+        const interestsLower = payload.interests.map(i => i.toLowerCase());
+        const allOpen = yield prisma_1.prisma.event.findMany({
+            where: {
+                status: "OPEN",
+                endDate: { gte: new Date() },
+            },
+            select: {
+                id: true,
+                title: true,
+                eventType: true,
+                description: true,
+                location: true,
+                startDate: true,
+                joiningFee: true,
+                minParticipants: true,
+                maxParticipants: true,
+                status: true,
+                host: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        avgRating: true,
+                        reviewCount: true,
+                        hostProfile: { select: { status: true } },
+                    },
+                },
+                _count: { select: { participants: true } },
+            },
+            take: 20,
+        });
+        events = allOpen.filter(e => e.eventType &&
+            interestsLower.includes(e.eventType.toLowerCase()));
     }
-  ]
-}
-
-Return ONLY valid JSON. No explanations, no comments.
-`;
-    // -------------------------------
-    //  AI fallback models
-    // -------------------------------
-    const models = [
-        "google/gemma-2-27b-it:free",
-        "qwen/qwen2.5-14b:free",
-        "z-ai/glm-4.5-air:free",
-    ];
+    const slim = events.map(e => {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+        return ({
+            id: e.id,
+            title: e.title,
+            eventType: (_a = e.eventType) !== null && _a !== void 0 ? _a : "Unknown",
+            description: ((_b = e.description) !== null && _b !== void 0 ? _b : "").slice(0, 120),
+            location: (() => {
+                var _a, _b;
+                try {
+                    const loc = typeof e.location === "string"
+                        ? JSON.parse(e.location)
+                        : e.location;
+                    return {
+                        city: (_b = (_a = loc === null || loc === void 0 ? void 0 : loc.city) !== null && _a !== void 0 ? _a : loc === null || loc === void 0 ? void 0 : loc.formattedAddress) !== null && _b !== void 0 ? _b : "Unknown",
+                    };
+                }
+                catch (_c) {
+                    return { city: "Unknown" };
+                }
+            })(),
+            startDate: e.startDate,
+            joiningFee: (_c = e.joiningFee) !== null && _c !== void 0 ? _c : 0,
+            currentParticipants: e._count.participants,
+            maxParticipants: e.maxParticipants,
+            hostName: (_e = (_d = e.host) === null || _d === void 0 ? void 0 : _d.fullName) !== null && _e !== void 0 ? _e : "Unknown",
+            hostAvgRating: (_g = (_f = e.host) === null || _f === void 0 ? void 0 : _f.avgRating) !== null && _g !== void 0 ? _g : 0,
+            hostReviewCount: (_j = (_h = e.host) === null || _h === void 0 ? void 0 : _h.reviewCount) !== null && _j !== void 0 ? _j : 0,
+            hostApproved: ((_l = (_k = e.host) === null || _k === void 0 ? void 0 : _k.hostProfile) === null || _l === void 0 ? void 0 : _l.status) === "APPROVED",
+        });
+    });
+    if (slim.length === 0) {
+        return { suggestedEvents: [] };
+    }
+    const prompt = `You are a JSON-only event recommendation API. You MUST respond with ONLY valid JSON - no explanations, no markdown, no code fences, no text before or after.
+ 
+User interests: ${JSON.stringify(payload.interests)}
+ 
+Available OPEN events: ${JSON.stringify(slim)}
+ 
+Task: Pick the top ${Math.min(3, slim.length)} most relevant events matching the user's interests.
+ 
+RESPOND WITH EXACTLY THIS JSON STRUCTURE AND NOTHING ELSE:
+{"suggestedEvents":[{"id":"","title":"","eventType":"","relevanceScore":85,"reason":"2-sentence explanation why this matches the user interests","host":{"id":"","fullName":"","avgRating":0,"reviewCount":0},"location":{"city":""},"startDate":"","joiningFee":0}]}`;
+    const models = yield (0, open_router_1.getFreeFallbackModels)();
     let completion = null;
-    console.log("Analyzing with fallback models...\n");
+    let lastError = "";
+    console.log(`\n🎯 AI matching ${slim.length} events for interests: ${payload.interests.join(", ")}`);
     for (const model of models) {
         try {
-            console.log(`Trying model: ${model}`);
+            console.log(`  Trying: ${model}`);
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 55000);
             completion = yield open_router_1.openai.chat.completions.create({
                 model,
                 messages: [
                     {
                         role: "system",
-                        content: "You are a highly accurate and strict JSON-only event recommendation AI.",
+                        content: "You are a JSON-only API. Respond ONLY with valid JSON matching the exact schema provided. No markdown, no explanations, no code blocks.",
                     },
-                    {
-                        role: "user",
-                        content: prompt,
-                    },
+                    { role: "user", content: prompt },
                 ],
-                temperature: 0.2, // More accuracy
-            });
-            break; // success → exit loop
+                temperature: 0.1,
+                max_tokens: 800,
+            }, { signal: controller.signal });
+            clearTimeout(timer);
+            console.log(`  ✅ Success: ${model}`);
+            break;
         }
         catch (error) {
-            console.error(`Model failed → ${model}`, error.message);
+            const msg = error instanceof Error ? error.message : String(error);
+            lastError = msg;
+            console.error(`  ❌ Failed: ${model} — ${msg.slice(0, 80)}`);
         }
     }
     if (!completion) {
-        throw new ApiError_1.default(http_status_1.default.SERVICE_UNAVAILABLE, "All AI models failed. Please try again later.");
+        throw new ApiError_1.default(http_status_1.default.SERVICE_UNAVAILABLE, `All AI models failed. Last error: ${lastError}`);
     }
-    const result = yield (0, extractJsonFromMessage_1.extractJsonFromMessage)(completion.choices[0].message);
-    return result;
+    const rawText = (_c = (_b = (_a = completion.choices[0]) === null || _a === void 0 ? void 0 : _a.message) === null || _b === void 0 ? void 0 : _b.content) !== null && _c !== void 0 ? _c : "";
+    // console.log(`\n📥 Raw AI response (first 300 chars):\n${rawText.slice(0, 300)}\n`);
+    let parsed;
+    try {
+        parsed = (0, extractJsonFromMessage_1.extractJsonFromMessage)(rawText);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    }
+    catch (e) {
+        console.error("❌ JSON extraction failed:", rawText.slice(0, 500));
+        const fallback = slim.slice(0, 3).map((e, i) => ({
+            id: e.id,
+            title: e.title,
+            eventType: e.eventType,
+            relevanceScore: 90 - i * 5,
+            reason: `This ${e.eventType} event matches your interest in ${payload.interests.join(", ")}.`,
+            host: {
+                id: "",
+                fullName: e.hostName,
+                avgRating: e.hostAvgRating,
+                reviewCount: e.hostReviewCount,
+            },
+            location: e.location,
+            startDate: e.startDate,
+            joiningFee: e.joiningFee,
+        }));
+        return { suggestedEvents: fallback };
+    }
+    const suggestions = (_e = (_d = parsed.suggestedEvents) !== null && _d !== void 0 ? _d : parsed.data) !== null && _e !== void 0 ? _e : [];
+    return { suggestedEvents: suggestions };
 });
+exports.getAISuggestions = getAISuggestions;
 const getEventById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     return prisma_1.prisma.event.findUnique({
         where: { id },
@@ -316,7 +395,7 @@ const deleteEvent = (id) => __awaiter(void 0, void 0, void 0, function* () {
 exports.EventService = {
     createEvent,
     updateEvent,
-    getAISuggestions,
+    getAISuggestions: exports.getAISuggestions,
     getEventById,
     myEvents,
     listEvents,

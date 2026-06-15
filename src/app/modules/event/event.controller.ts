@@ -8,8 +8,9 @@ import { eventFilterableFields } from "./event.constant";
 import { IUser } from "../user/user.interface";
 
 const createEvent = catchAsync(
-  async (req: Request, res: Response) => {
-    const result = await EventService.createEvent(req);
+  async (req: Request& { user?: IUser}, res: Response) => {
+  const user = req.user as IUser;
+    const result = await EventService.createEvent(user, req);
 
     sendResponse(res, {
       statusCode: httpStatus.CREATED,
@@ -20,8 +21,9 @@ const createEvent = catchAsync(
   }
 );
 
-const updateEvent = catchAsync(async (req: Request, res: Response) => {
-  const result = await EventService.updateEvent(req.params.id, req);
+const updateEvent = catchAsync(async (req: Request& { user?: IUser}, res: Response) => {
+  const user = req.user as IUser;
+  const result = await EventService.updateEvent(req.params.id, user, req);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

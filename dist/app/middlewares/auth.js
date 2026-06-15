@@ -19,8 +19,9 @@ const config_1 = __importDefault(require("../config"));
 const auth = (...roles) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+        var _a;
         try {
-            const token = req.cookies.accessToken;
+            const token = ((_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split(" ")[1]) || req.cookies.accessToken;
             if (!token) {
                 throw new ApiError_1.default(http_status_1.default.UNAUTHORIZED, "You are not authorized!");
             }

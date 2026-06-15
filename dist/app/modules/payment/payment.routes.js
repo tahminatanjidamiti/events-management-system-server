@@ -14,5 +14,6 @@ const payment_controller_1 = require("./payment.controller");
 const auth_1 = __importDefault(require("../../middlewares/auth"));
 const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
+router.get("/session/:transactionId", (0, auth_1.default)(client_1.Role.USER), payment_controller_1.PaymentController.getSession);
 router.post("/create-session", (0, auth_1.default)(client_1.Role.USER), payment_controller_1.PaymentController.createCheckoutSession);
 exports.PaymentRoutes = router;

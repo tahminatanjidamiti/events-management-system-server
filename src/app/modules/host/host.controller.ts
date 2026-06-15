@@ -51,6 +51,16 @@ const getAllHosts = catchAsync(async (_req: Request, res: Response) => {
     data: result,
   });
 });
+const getHostById = catchAsync(async (req: Request, res: Response) => {
+  const result = await HostService.getHostById(req.params.id);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Get Host By Id retrieved",
+    data: result,
+  });
+});
 
 
 export const HostController = {
@@ -58,4 +68,5 @@ export const HostController = {
   updateHost,
   approveHost,
   getAllHosts,
+  getHostById
 };

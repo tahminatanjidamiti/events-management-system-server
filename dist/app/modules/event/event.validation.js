@@ -6,7 +6,7 @@ const zod_1 = require("zod");
 const createEventValidationSchema = zod_1.z.object({
     title: zod_1.z.string().min(1),
     eventType: zod_1.z.string().optional().nullable(),
-    hostId: zod_1.z.string(),
+    hostId: zod_1.z.string().optional(),
     description: zod_1.z.string().min(1),
     minParticipants: zod_1.z.number().int().optional().nullable(),
     maxParticipants: zod_1.z.number().int().optional().nullable(),
@@ -14,7 +14,7 @@ const createEventValidationSchema = zod_1.z.object({
     location: zod_1.z.object({
         lat: zod_1.z.number({ message: "Latitude" }),
         lng: zod_1.z.number({ message: "Longitude" }),
-        formattedAddress: zod_1.z.string().optional(),
+        formattedAddress: zod_1.z.string(),
     }).optional().nullable(),
     startDate: zod_1.z.string(),
     endDate: zod_1.z.string(),

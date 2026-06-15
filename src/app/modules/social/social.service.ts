@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "../../shared/prisma";
-import { IFriendRequestPayload, IFriendUpdatePayload, IFollowPayload, ISaveEventPayload, IReviewPayload } from "./social.interface";
+import { IFriendRequestPayload, IFriendUpdatePayload, IFollowPayload, IReviewPayload } from "./social.interface";
 import ApiError from "../../errors/ApiError";
 import httpStatus from "http-status";
 import { FriendshipStatus } from "@prisma/client";
@@ -162,22 +162,6 @@ const listFollows = async (filters: any, options: IOptions) => {
   return { meta: { page, limit, total }, data };
 };
 
-const toggleSaveEvent = async (userId: string, payload: ISaveEventPayload) => {
-  const existing = await prisma.savedEvent.findFirst({
-    where: { userId, eventId: payload.eventId },
-  });
-
-  if (existing) {
-    await prisma.savedEvent.delete({ where: { id: existing.id } });
-    return { action: "unsaved" };
-  }
-
-  const created = await prisma.savedEvent.create({
-    data: { userId, eventId: payload.eventId },
-  });
-
-  return created;
-};
 
 const listSavedEvents = async (filters: any, options: IOptions) => {
   const { page, limit, skip } = paginationHelper.calculatePagination(options);
@@ -273,7 +257,11 @@ const listNotifications = async (filters: any, options: IOptions) => {
   const andConditions: Prisma.NotificationWhereInput[] = [];
 
   if (filters.userId) andConditions.push({ userId: filters.userId });
-  if (typeof filters.isRead !== "undefined") andConditions.push({ isRead: filters.isRead === "true" || filters.isRead === true });
+  if (filters.isRead !== undefined && filters.isRead !== "" && filters.isRead !== null) {
+    andConditions.push({
+      isRead: filters.isRead === "true" || filters.isRead === true,
+    });
+  }
 
   const where = andConditions.length ? { AND: andConditions } : {};
 
@@ -300,7 +288,6 @@ export const SocialService = {
   listFriendRequests,
   followUser,
   listFollows,
-  toggleSaveEvent,
   listSavedEvents,
   createReview,
   listReviews,

@@ -148,19 +148,6 @@ const listFollows = (filters, options) => __awaiter(void 0, void 0, void 0, func
     const total = yield prisma_1.prisma.follow.count({ where });
     return { meta: { page, limit, total }, data };
 });
-const toggleSaveEvent = (userId, payload) => __awaiter(void 0, void 0, void 0, function* () {
-    const existing = yield prisma_1.prisma.savedEvent.findFirst({
-        where: { userId, eventId: payload.eventId },
-    });
-    if (existing) {
-        yield prisma_1.prisma.savedEvent.delete({ where: { id: existing.id } });
-        return { action: "unsaved" };
-    }
-    const created = yield prisma_1.prisma.savedEvent.create({
-        data: { userId, eventId: payload.eventId },
-    });
-    return created;
-});
 const listSavedEvents = (filters, options) => __awaiter(void 0, void 0, void 0, function* () {
     const { page, limit, skip } = paginationHelper_1.paginationHelper.calculatePagination(options);
     const andConditions = [];
@@ -241,8 +228,11 @@ const listNotifications = (filters, options) => __awaiter(void 0, void 0, void 0
     const andConditions = [];
     if (filters.userId)
         andConditions.push({ userId: filters.userId });
-    if (typeof filters.isRead !== "undefined")
-        andConditions.push({ isRead: filters.isRead === "true" || filters.isRead === true });
+    if (filters.isRead !== undefined && filters.isRead !== "" && filters.isRead !== null) {
+        andConditions.push({
+            isRead: filters.isRead === "true" || filters.isRead === true,
+        });
+    }
     const where = andConditions.length ? { AND: andConditions } : {};
     const data = yield prisma_1.prisma.notification.findMany({
         where,
@@ -265,7 +255,6 @@ exports.SocialService = {
     listFriendRequests,
     followUser,
     listFollows,
-    toggleSaveEvent,
     listSavedEvents,
     createReview,
     listReviews,

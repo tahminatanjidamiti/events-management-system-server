@@ -18,11 +18,18 @@ const handleFriendAction = catchAsync(async (req: Request & { user?: IUser }, re
   sendResponse(res, { statusCode: httpStatus.OK, success: true, message: "Friend request updated", data: result });
 });
 
-const listFriendRequests = catchAsync(async (req: Request, res: Response) => {
+const listFriendRequests = catchAsync(async (req: Request & { user?: IUser }, res: Response) => {
   const filters = pick(req.query, friendFilterableFields);
+  if (req.user) filters.receiverId = req.user.id;
   const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
   const result = await SocialService.listFriendRequests(filters, options);
-  sendResponse(res, { statusCode: httpStatus.OK, success: true, message: "Friend requests", meta: result.meta, data: result.data });
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Friend requests",
+    meta: result.meta,
+    data: result.data,
+  });
 });
 
 const followUser = catchAsync(async (req: Request & { user?: IUser }, res: Response) => {
@@ -37,16 +44,19 @@ const listFollows = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, { statusCode: httpStatus.OK, success: true, message: "Follows", meta: result.meta, data: result.data });
 });
 
-const toggleSaveEvent = catchAsync(async (req: Request & { user?: IUser }, res: Response) => {
-  const result = await SocialService.toggleSaveEvent(req.user!.id, req.body);
-  sendResponse(res, { statusCode: httpStatus.OK, success: true, message: "Saved event toggled", data: result });
-});
 
-const listSavedEvents = catchAsync(async (req: Request, res: Response) => {
+const listSavedEvents = catchAsync(async (req: Request & { user?: IUser }, res: Response) => {
   const filters = pick(req.query, savedEventFilterableFields);
+  if (req.user) filters.userId = req.user.id;
   const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
   const result = await SocialService.listSavedEvents(filters, options);
-  sendResponse(res, { statusCode: httpStatus.OK, success: true, message: "Saved events", meta: result.meta, data: result.data });
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Saved events",
+    meta: result.meta,
+    data: result.data,
+  });
 });
 
 const createReview = catchAsync(async (req: Request & { user?: IUser }, res: Response) => {
@@ -63,8 +73,7 @@ const listReviews = catchAsync(async (req: Request, res: Response) => {
 
 const listNotifications = catchAsync(async (req: Request & { user?: IUser }, res: Response) => {
   const filters = pick(req.query, notificationFilterableFields);
-  // ensure only user's notifications when not admin
-  if (!filters.userId && req.user) filters.userId = req.user.id;
+ if (req.user) filters.userId = req.user.id;
   const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
   const result = await SocialService.listNotifications(filters, options);
   sendResponse(res, { statusCode: httpStatus.OK, success: true, message: "Notifications", meta: result.meta, data: result.data });
@@ -81,7 +90,6 @@ export const SocialController = {
   listFriendRequests,
   followUser,
   listFollows,
-  toggleSaveEvent,
   listSavedEvents,
   createReview,
   listReviews,

@@ -20,7 +20,8 @@ const event_service_1 = require("./event.service");
 const pick_1 = __importDefault(require("../../helper/pick"));
 const event_constant_1 = require("./event.constant");
 const createEvent = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield event_service_1.EventService.createEvent(req);
+    const user = req.user;
+    const result = yield event_service_1.EventService.createEvent(user, req);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.CREATED,
         success: true,
@@ -29,7 +30,8 @@ const createEvent = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
     });
 }));
 const updateEvent = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield event_service_1.EventService.updateEvent(req.params.id, req);
+    const user = req.user;
+    const result = yield event_service_1.EventService.updateEvent(req.params.id, user, req);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,

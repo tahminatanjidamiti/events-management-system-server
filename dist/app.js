@@ -4,9 +4,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const compression_1 = __importDefault(require("compression"));
+const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const express_1 = __importDefault(require("express"));
+const express_session_1 = __importDefault(require("express-session"));
 const node_cron_1 = __importDefault(require("node-cron"));
 const config_1 = __importDefault(require("./app/config"));
 const payment_service_1 = require("./app/modules/payment/payment.service");
@@ -15,11 +17,17 @@ const notFound_1 = __importDefault(require("./app/middlewares/notFound"));
 const payment_webhook_1 = require("./app/modules/payment/payment.webhook");
 const routes_1 = __importDefault(require("./app/routes"));
 const app = (0, express_1.default)();
+app.use((0, express_session_1.default)({
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    secret: config_1.default.express_session_secret,
+    resave: false,
+    saveUninitialized: false,
+}));
 app.post("/webhook", express_1.default.raw({ type: "application/json" }), payment_webhook_1.paymentWebhookHandler);
 // Middleware
-app.use((0, cors_1.default)());
 app.use((0, compression_1.default)()); // Compresses response bodies for faster delivery
 app.use(express_1.default.json());
+app.set("trust proxy", 1);
 app.use((0, cookie_parser_1.default)());
 app.use(express_1.default.urlencoded({ extended: true }));
 node_cron_1.default.schedule('* * * * *', () => {
@@ -32,6 +40,7 @@ node_cron_1.default.schedule('* * * * *', () => {
         console.error(err);
     }
 });
+app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({
     origin: config_1.default.frontend_url,
     credentials: true,

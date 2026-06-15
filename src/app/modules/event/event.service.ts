@@ -9,10 +9,16 @@ import { fileUploader } from "../../helper/fileUploader";
 import { Request } from "express";
 import ApiError from "../../errors/ApiError";
 import { extractJsonFromMessage } from "../../helper/extractJsonFromMessage";
-import { openai } from "../../helper/open-router";
+import { getFreeFallbackModels, openai } from "../../helper/open-router";
 import { IUser } from "../user/user.interface";
 
-const createEvent = async (req: Request) => {
+const createEvent = async (user: IUser, req: Request) => {
+  const host = await prisma.host.findUnique({ where: { userId: user.id } });
+
+  if (!host) throw new ApiError(httpStatus.NOT_FOUND, "Host profile not found.");
+
+  const hostId = user.id;
+
   if (req.file) {
     const uploadResult = await fileUploader.uploadToCloudinary(req.file);
     req.body.image = uploadResult?.secure_url;
@@ -20,27 +26,35 @@ const createEvent = async (req: Request) => {
 
   const payload = req.body;
 
-  const created = await prisma.event.create({
-    data: {
-      title: payload.title,
-      eventType: payload.eventType ?? null,
-      description: payload.description,
-      hostId: payload.hostId,
-      minParticipants: payload.minParticipants ?? null,
-      maxParticipants: payload.maxParticipants ?? null,
-      image: payload.image ?? null,
-      location: payload.location as any,
-      startDate: new Date(payload.startDate),
-      endDate: new Date(payload.endDate),
-      joiningFee: payload.joiningFee ?? 0,
-      status: EventStatus.OPEN,
-    },
-  });
-
-  return created;
+  try {
+    const created = await prisma.event.create({
+      data: {
+        title: payload.title,
+        eventType: payload.eventType ?? null,
+        description: payload.description,
+        hostId: hostId,
+        minParticipants: payload.minParticipants ?? null,
+        maxParticipants: payload.maxParticipants ?? null,
+        image: payload.image ?? null,
+        location: payload.location ?? {},
+        startDate: new Date(payload.startDate),
+        endDate: new Date(payload.endDate),
+        joiningFee: payload.joiningFee ?? 0,
+        status: EventStatus.OPEN,
+      },
+    });
+    return created;
+  } catch (err) {
+    console.error("Prisma error →", err);
+    throw err;
+  }
 };
 
-const updateEvent = async (eventId: string, req: Request) => {
+const updateEvent = async (eventId: string, user: IUser, req: Request) => {
+  const host = await prisma.host.findUnique({ where: { userId: user.id } });
+  if (!host) throw new Error("Host profile not found. Please register as a host first.");
+
+  const hostId = user.id;
   if (req.file) {
     const uploadResult = await fileUploader.uploadToCloudinary(req.file);
     req.body.image = uploadResult?.secure_url;
@@ -51,148 +65,215 @@ const updateEvent = async (eventId: string, req: Request) => {
   if (data.startDate) data.startDate = new Date(data.startDate);
   if (data.endDate) data.endDate = new Date(data.endDate);
   if (data.location) data.location = data.location as any;
+  data.hostId = hostId;
 
   return prisma.event.update({
     where: { id: eventId },
-    data : data,
+    data: data,
   });
 };
-const getAISuggestions = async (payload: { interests: string[] }) => {
+
+export const getAISuggestions = async (payload: { interests: string[] }) => {
   if (!payload?.interests || payload.interests.length === 0) {
     throw new ApiError(httpStatus.BAD_REQUEST, "Interests are required!");
   }
 
-  // Only fetch useful fields for better AI accuracy
-  const events = await prisma.event.findMany({
+  const rawEvents = await prisma.event.findMany({
     where: {
-      status: "OPEN", // Only open events
-      endDate: { gte: new Date() }, // Not ended
+      status: "OPEN",
+      endDate: { gte: new Date() },
+      eventType: {
+        in: payload.interests,
+      },
     },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      eventType: true,
+      description: true,
+      location: true,
+      startDate: true,
+      joiningFee: true,
+      minParticipants: true,
+      maxParticipants: true,
+      status: true,
       host: {
-        include: {
-          hostProfile: true,
+        select: {
+          id: true,
+          fullName: true,
+          avgRating: true,
+          reviewCount: true,
+          hostProfile: {
+            select: { status: true },
+          },
         },
       },
-      participants: true,
-      reviews: true,
-      savedBy: true,
+      _count: {
+        select: { participants: true },
+      },
     },
+    take: 20,
   });
 
-  console.log("events data loaded.......\n");
-
-  // -------------------------------
-  // 🎯 BEST Structured Prompt
-  // -------------------------------
-  const prompt = `
-You are an intelligent event recommendation assistant.
-Your job is to recommend the **top 3 most relevant events** for a user based on their interests.
-
-### User interests:
-${JSON.stringify(payload.interests, null, 2)}
-
-### Event schema details:
-Each event contains:
-- eventType: string
-- location: { city, address, coordinates }
-- status: OPEN | FULL | COMPLETED | CANCELLED
-- host with Host status (APPROVED / PENDING)
-- participants count
-- minParticipants / maxParticipants
-- joiningFee
-- date range
-
-### IMPORTANT RULES:
-1. Only suggest events with:
-   - status = OPEN
-   - host.status = APPROVED (if host exists)
-   - event not FULL (maxParticipants > current participants)
-2. Match the eventType or description with interests.
-3. Prefer:
-   - events in similar locations
-   - events with good reviews
-   - active hosts (avgRating, reviewCount)
-4. Do not suggest irrelevant events.
-
-### Events dataset (JSON):
-${JSON.stringify(events, null, 2)}
-
-### OUTPUT FORMAT (STRICT JSON):
-{
-  "suggestedEvents": [
-    {
-      "id": "",
-      "title": "",
-      "eventType": "",
-      "relevanceScore": 0-100,
-      "reason": "",
-      "host": {
-        "id": "",
-        "fullName": "",
-        "avgRating": 0,
-        "reviewCount": 0
+  let events = rawEvents;
+  if (events.length === 0) {
+    const interestsLower = payload.interests.map(i => i.toLowerCase());
+    const allOpen = await prisma.event.findMany({
+      where: {
+        status: "OPEN",
+        endDate: { gte: new Date() },
       },
-      "location": {},
-      "startDate": "",
-      "joiningFee": 0
-    }
-  ]
-}
+      select: {
+        id: true,
+        title: true,
+        eventType: true,
+        description: true,
+        location: true,
+        startDate: true,
+        joiningFee: true,
+        minParticipants: true,
+        maxParticipants: true,
+        status: true,
+        host: {
+          select: {
+            id: true,
+            fullName: true,
+            avgRating: true,
+            reviewCount: true,
+            hostProfile: { select: { status: true } },
+          },
+        },
+        _count: { select: { participants: true } },
+      },
+      take: 20,
+    });
+    events = allOpen.filter(e =>
+      e.eventType &&
+      interestsLower.includes(e.eventType.toLowerCase())
+    );
+  }
 
-Return ONLY valid JSON. No explanations, no comments.
-`;
+  const slim = events.map(e => ({
+    id: e.id,
+    title: e.title,
+    eventType: e.eventType ?? "Unknown",
+    description: (e.description ?? "").slice(0, 120),
+    location: (() => {
+      try {
+        const loc = typeof e.location === "string"
+          ? JSON.parse(e.location)
+          : (e.location as Record<string, unknown>);
+        return {
+          city: loc?.city ?? loc?.formattedAddress ?? "Unknown",
+        };
+      } catch { return { city: "Unknown" }; }
+    })(),
+    startDate: e.startDate,
+    joiningFee: e.joiningFee ?? 0,
+    currentParticipants: e._count.participants,
+    maxParticipants: e.maxParticipants,
+    hostName: e.host?.fullName ?? "Unknown",
+    hostAvgRating: e.host?.avgRating ?? 0,
+    hostReviewCount: e.host?.reviewCount ?? 0,
+    hostApproved: e.host?.hostProfile?.status === "APPROVED",
+  }));
 
-  // -------------------------------
-  //  AI fallback models
-  // -------------------------------
-  const models: string[] = [
-    "google/gemma-2-27b-it:free",
-    "qwen/qwen2.5-14b:free",
-    "z-ai/glm-4.5-air:free",
-  ];
+  if (slim.length === 0) {
+    return { suggestedEvents: [] };
+  }
 
-  let completion = null;
+  const prompt = `You are a JSON-only event recommendation API. You MUST respond with ONLY valid JSON - no explanations, no markdown, no code fences, no text before or after.
+ 
+User interests: ${JSON.stringify(payload.interests)}
+ 
+Available OPEN events: ${JSON.stringify(slim)}
+ 
+Task: Pick the top ${Math.min(3, slim.length)} most relevant events matching the user's interests.
+ 
+RESPOND WITH EXACTLY THIS JSON STRUCTURE AND NOTHING ELSE:
+{"suggestedEvents":[{"id":"","title":"","eventType":"","relevanceScore":85,"reason":"2-sentence explanation why this matches the user interests","host":{"id":"","fullName":"","avgRating":0,"reviewCount":0},"location":{"city":""},"startDate":"","joiningFee":0}]}`;
 
-  console.log("Analyzing with fallback models...\n");
+  const models = await getFreeFallbackModels();
+
+  let completion: Awaited<ReturnType<typeof openai.chat.completions.create>> | null = null;
+  let lastError = "";
+
+  console.log(`\n🎯 AI matching ${slim.length} events for interests: ${payload.interests.join(", ")}`);
 
   for (const model of models) {
     try {
-      console.log(`Trying model: ${model}`);
+      console.log(`  Trying: ${model}`);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 55_000);
 
-      completion = await openai.chat.completions.create({
-        model,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a highly accurate and strict JSON-only event recommendation AI.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.2, // More accuracy
-      });
-
-      break; // success → exit loop
-    } catch (error: any) {
-      console.error(`Model failed → ${model}`, error.message);
+      completion = await openai.chat.completions.create(
+        {
+          model,
+          messages: [
+            {
+              role: "system",
+              content: "You are a JSON-only API. Respond ONLY with valid JSON matching the exact schema provided. No markdown, no explanations, no code blocks.",
+            },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.1,
+          max_tokens: 800,
+        },
+        { signal: controller.signal }
+      );
+      clearTimeout(timer);
+      console.log(`  ✅ Success: ${model}`);
+      break;
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      lastError = msg;
+      console.error(`  ❌ Failed: ${model} — ${msg.slice(0, 80)}`);
     }
   }
 
   if (!completion) {
     throw new ApiError(
       httpStatus.SERVICE_UNAVAILABLE,
-      "All AI models failed. Please try again later."
+      `All AI models failed. Last error: ${lastError}`
     );
   }
 
-  const result = await extractJsonFromMessage(completion.choices[0].message);
+  const rawText = completion.choices[0]?.message?.content ?? "";
+  // console.log(`\n📥 Raw AI response (first 300 chars):\n${rawText.slice(0, 300)}\n`);
 
-  return result;
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = extractJsonFromMessage(rawText);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (e) {
+    console.error("❌ JSON extraction failed:", rawText.slice(0, 500));
+    const fallback = slim.slice(0, 3).map((e, i) => ({
+      id: e.id,
+      title: e.title,
+      eventType: e.eventType,
+      relevanceScore: 90 - i * 5,
+      reason: `This ${e.eventType} event matches your interest in ${payload.interests.join(", ")}.`,
+      host: {
+        id: "",
+        fullName: e.hostName,
+        avgRating: e.hostAvgRating,
+        reviewCount: e.hostReviewCount,
+      },
+      location: e.location,
+      startDate: e.startDate,
+      joiningFee: e.joiningFee,
+    }));
+    return { suggestedEvents: fallback };
+  }
+
+  const suggestions =
+    (parsed.suggestedEvents as unknown[]) ??
+    (parsed.data as unknown[]) ??
+    [];
+
+  return { suggestedEvents: suggestions };
 };
+
 const getEventById = async (id: string) => {
   return prisma.event.findUnique({
     where: { id },
@@ -247,21 +328,21 @@ const myEvents = async (
     });
   }
 
- if (user.role === "HOST") {
-  andConditions.push({
-    hostId: user.id,
-  });
-}
+  if (user.role === "HOST") {
+    andConditions.push({
+      hostId: user.id,
+    });
+  }
 
-if (user.role === "USER") {
-  andConditions.push({
-    participants: {
-      some: {
-        userId: user.id,
+  if (user.role === "USER") {
+    andConditions.push({
+      participants: {
+        some: {
+          userId: user.id,
+        },
       },
-    },
-  });
-}
+    });
+  }
 
   const where: Prisma.EventWhereInput =
     andConditions.length > 0 ? { AND: andConditions } : {};

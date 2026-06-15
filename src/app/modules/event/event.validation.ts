@@ -4,7 +4,7 @@ import { z } from "zod";
 const createEventValidationSchema = z.object({
   title: z.string().min(1),
   eventType: z.string().optional().nullable(),
-  hostId: z.string(),
+  hostId: z.string().optional(),
   description: z.string().min(1),
   minParticipants: z.number().int().optional().nullable(),
   maxParticipants: z.number().int().optional().nullable(),
@@ -12,7 +12,7 @@ const createEventValidationSchema = z.object({
   location: z.object({
     lat: z.number({ message: "Latitude" }),
     lng: z.number({ message: "Longitude" }),
-    formattedAddress: z.string().optional(),
+    formattedAddress: z.string(),
   }).optional().nullable(),
   startDate: z.string(),
   endDate: z.string(),

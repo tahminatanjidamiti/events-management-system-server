@@ -18,7 +18,12 @@ const createCheckoutSession = catchAsync( async (req: Request & { user?: IUser }
     });
   }
 );
+const getSession = catchAsync(async (req, res) => {
+  const result = await PaymentService.getSession(req.params.transactionId); 
+  sendResponse(res, { statusCode: 200, success: true, message: "Session fetched", data: result });
+});
 
 export const PaymentController = {
   createCheckoutSession,
+  getSession
 }

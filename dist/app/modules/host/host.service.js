@@ -74,9 +74,34 @@ const getAllHosts = () => __awaiter(void 0, void 0, void 0, function* () {
         orderBy: { createdAt: "desc" },
     });
 });
+const getHostById = (id) => __awaiter(void 0, void 0, void 0, function* () {
+    return prisma_1.prisma.host.findUnique({
+        where: { id },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    fullName: true,
+                    email: true,
+                    role: true,
+                    interests: true,
+                    phone: true,
+                    picture: true,
+                    status: true,
+                    isVerified: true,
+                    bio: true,
+                    city: true,
+                    avgRating: true,
+                    reviewCount: true,
+                },
+            },
+        },
+    });
+});
 exports.HostService = {
     requestToBecomeHost,
     updateHost,
     approveHost,
     getAllHosts,
+    getHostById
 };

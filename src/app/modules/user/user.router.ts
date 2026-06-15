@@ -13,11 +13,8 @@ router.get("/:id", UserController.getUserById);
 router.get('/me', UserController.getMyProfile)
 router.get("/", UserController.getAllUsers);
 router.delete("/:id", auth(Role.ADMIN), UserController.deleteUser);
-router.post(
-  "/register",
-  fileUploader.upload.single("file"),
-  validateRequest(UserValidation.createUserValidationSchema), UserController.createUser);
-router.patch("/:id", fileUploader.upload.single("file"), validateRequest(UserValidation.updateUserValidationSchema),  auth(Role.ADMIN, Role.HOST, Role.USER), UserController.updateUser);
+router.post("/register", fileUploader.upload.single("file"), validateRequest(UserValidation.createUserValidationSchema), UserController.createUser);
+router.patch("/:id", auth(Role.ADMIN, Role.HOST, Role.USER), fileUploader.upload.single("file"), validateRequest(UserValidation.updateUserValidationSchema),  UserController.updateUser);
 
 
 export const UserRoutes = router;

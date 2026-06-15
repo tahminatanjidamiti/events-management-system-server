@@ -29,14 +29,39 @@ const fetchDashboardMetaData = (user) => __awaiter(void 0, void 0, void 0, funct
             throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Invalid user role");
     }
 });
+const getUserMetaData = (user) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = user.id;
+    const upcoming = yield prisma_1.prisma.participant.count({
+        where: { userId, event: { startDate: { gt: new Date() } } },
+    });
+    const past = yield prisma_1.prisma.participant.count({
+        where: { userId, event: { endDate: { lt: new Date() } } },
+    });
+    const saved = yield prisma_1.prisma.savedEvent.count({ where: { userId } });
+    const paymentCount = yield prisma_1.prisma.payment.count({
+        where: { userId, status: client_1.PaymentStatus.PAID },
+    });
+    return {
+        barData: [
+            { label: "Upcoming Events", value: upcoming },
+            { label: "Past Events", value: past },
+            { label: "Saved Events", value: saved },
+            { label: "Paid Payments", value: paymentCount },
+        ],
+        pieData: [
+            { label: "Upcoming", value: upcoming },
+            { label: "Past", value: past },
+            { label: "Saved", value: saved },
+            { label: "Paid", value: paymentCount },
+        ],
+    };
+});
 const getHostMetaData = (user) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const host = yield prisma_1.prisma.host.findUnique({ where: { userId: user.id } });
     if (!host)
         throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "Host profile not found");
-    const hostedEvents = yield prisma_1.prisma.event.findMany({
-        where: { hostId: user.id },
-    });
+    const hostedEvents = yield prisma_1.prisma.event.count({ where: { hostId: user.id } });
     const upcomingCount = yield prisma_1.prisma.event.count({
         where: { hostId: user.id, startDate: { gt: new Date() } },
     });
@@ -55,31 +80,18 @@ const getHostMetaData = (user) => __awaiter(void 0, void 0, void 0, function* ()
         _count: { id: true },
         where: { hostId: user.id },
     });
-    const formattedStatus = statusGroup.map(({ status, _count }) => ({ status, count: Number(_count.id) }));
     return {
-        hostedEventsCount: hostedEvents.length,
-        upcomingCount,
-        pastCount,
-        participantCount,
-        totalRevenue: (_a = totalRevenue._sum.amount) !== null && _a !== void 0 ? _a : 0,
-        eventStatusDistribution: formattedStatus,
-    };
-});
-const getUserMetaData = (user) => __awaiter(void 0, void 0, void 0, function* () {
-    const userId = user.id;
-    const upcoming = yield prisma_1.prisma.participant.count({
-        where: { userId, event: { startDate: { gt: new Date() } } },
-    });
-    const past = yield prisma_1.prisma.participant.count({
-        where: { userId, event: { endDate: { lt: new Date() } } },
-    });
-    const saved = yield prisma_1.prisma.savedEvent.count({ where: { userId } });
-    const paymentCount = yield prisma_1.prisma.payment.count({ where: { userId, status: client_1.PaymentStatus.PAID } });
-    return {
-        upcomingCount: upcoming,
-        pastCount: past,
-        savedCount: saved,
-        paidPaymentsCount: paymentCount,
+        barData: [
+            { label: "Total Events", value: hostedEvents },
+            { label: "Upcoming", value: upcomingCount },
+            { label: "Past", value: pastCount },
+            { label: "Participants", value: participantCount },
+            { label: "Revenue (৳)", value: Number((_a = totalRevenue._sum.amount) !== null && _a !== void 0 ? _a : 0) },
+        ],
+        pieData: statusGroup.map(({ status, _count }) => ({
+            label: status,
+            value: Number(_count.id),
+        })),
     };
 });
 const getAdminMetaData = () => __awaiter(void 0, void 0, void 0, function* () {
@@ -89,24 +101,27 @@ const getAdminMetaData = () => __awaiter(void 0, void 0, void 0, function* () {
     const eventCount = yield prisma_1.prisma.event.count();
     const participantCount = yield prisma_1.prisma.participant.count();
     const paymentCount = yield prisma_1.prisma.payment.count();
-    const totalRevenue = yield prisma_1.prisma.payment.aggregate({ _sum: { amount: true }, where: { status: client_1.PaymentStatus.PAID } });
-    const eventsPerMonth = yield prisma_1.prisma.$queryRaw `
-    SELECT DATE_TRUNC('month', "createdAt") AS month, CAST(COUNT(*) AS INTEGER) AS count
-    FROM "Event"
-    GROUP BY month
-    ORDER BY month ASC
-  `;
-    const statusDistribution = yield prisma_1.prisma.event.groupBy({ by: ["status"], _count: { id: true } });
-    const formattedStatus = statusDistribution.map(({ status, _count }) => ({ status, count: Number(_count.id) }));
+    const totalRevenue = yield prisma_1.prisma.payment.aggregate({
+        _sum: { amount: true },
+        where: { status: client_1.PaymentStatus.PAID },
+    });
+    const statusDistribution = yield prisma_1.prisma.event.groupBy({
+        by: ["status"],
+        _count: { id: true },
+    });
     return {
-        userCount,
-        hostCount,
-        eventCount,
-        participantCount,
-        paymentCount,
-        totalRevenue: (_a = totalRevenue._sum.amount) !== null && _a !== void 0 ? _a : 0,
-        eventsPerMonth,
-        eventStatusDistribution: formattedStatus,
+        barData: [
+            { label: "Users", value: userCount },
+            { label: "Hosts", value: hostCount },
+            { label: "Events", value: eventCount },
+            { label: "Participants", value: participantCount },
+            { label: "Payments", value: paymentCount },
+            { label: "Revenue (৳)", value: Number((_a = totalRevenue._sum.amount) !== null && _a !== void 0 ? _a : 0) },
+        ],
+        pieData: statusDistribution.map(({ status, _count }) => ({
+            label: status,
+            value: Number(_count.id),
+        })),
     };
 });
 exports.MetaService = {

@@ -9,7 +9,7 @@ const auth = (...roles: string[]) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return async (req: Request & { user?: any }, res: Response, next: NextFunction) => {
         try {
-            const token = req.cookies.accessToken;
+            const token = req.headers.authorization?.split(" ")[1] || req.cookies.accessToken;
 
             if (!token) {
                 throw new ApiError(httpStatus.UNAUTHORIZED, "You are not authorized!")

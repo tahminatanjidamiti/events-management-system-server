@@ -17,65 +17,76 @@ const auth_service_1 = require("./auth.service");
 const catchAsync_1 = __importDefault(require("../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../shared/sendResponse"));
 const http_status_1 = __importDefault(require("http-status"));
+const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const loginWithEmailAndPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield auth_service_1.AuthService.loginWithEmailAndPassword(req.body);
-    const { accessToken, refreshToken } = result;
+    const { accessToken, refreshToken, user } = yield auth_service_1.AuthService.loginWithEmailAndPassword(req.body);
     res.cookie("accessToken", accessToken, {
         secure: true,
         httpOnly: true,
         sameSite: "none",
+        maxAge: 1000 * 60 * 60,
     });
     res.cookie("refreshToken", refreshToken, {
         secure: true,
         httpOnly: true,
         sameSite: "none",
+        maxAge: 1000 * 60 * 60 * 24 * 90,
     });
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
-        message: "User loggedin successfully!",
+        message: "User logged in successfully!",
         data: {
-            result
-        }
+            user,
+            accessToken,
+            refreshToken,
+        },
     });
 });
 const authWithGoogle = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield auth_service_1.AuthService.authWithGoogle(req.body);
+    const { accessToken, refreshToken, user } = yield auth_service_1.AuthService.authWithGoogle(req.body);
+    res.cookie("accessToken", accessToken, {
+        secure: true,
+        httpOnly: true,
+        sameSite: "none",
+        maxAge: 1000 * 60 * 60,
+    });
+    res.cookie("refreshToken", refreshToken, {
+        secure: true,
+        httpOnly: true,
+        sameSite: "none",
+        maxAge: 1000 * 60 * 60 * 24 * 90,
+    });
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
-        message: "User loggedin successfully!",
+        message: "User logged in successfully using Google!",
         data: {
-            id: result.id,
-            fullName: result.fullName,
-            email: result.email,
-            role: result.role,
-            picture: result.picture,
-            phone: result.phone,
-            status: result.status,
-            isVerified: result.isVerified,
-            bio: result.bio,
-            interests: result.interests,
-            city: result.city,
-            avgRating: result.avgRating,
-            reviewCount: result.reviewCount,
+            user,
+            accessToken,
+            refreshToken,
         },
     });
 });
 const refreshToken = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { refreshToken } = req.cookies;
+    var _a;
+    const refreshToken = req.cookies.refreshToken || ((_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split(" ")[1]);
+    if (!refreshToken) {
+        throw new ApiError_1.default(http_status_1.default.UNAUTHORIZED, "No refresh token");
+    }
     const result = yield auth_service_1.AuthService.refreshToken(refreshToken);
     res.cookie("accessToken", result.accessToken, {
         secure: true,
         httpOnly: true,
         sameSite: "none",
+        maxAge: 1000 * 60 * 60,
     });
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,
         success: true,
-        message: "Access token genereated successfully!",
+        message: "Access token generated successfully!",
         data: {
-            message: "Access token genereated successfully!",
+            accessToken: result.accessToken,
         },
     });
 }));
@@ -89,7 +100,8 @@ const forgotPassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
     });
 }));
 const resetPassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const token = req.headers.authorization || "";
+    var _a;
+    const token = ((_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split(" ")[1]) || "";
     yield auth_service_1.AuthService.resetPassword(token, req.body);
     (0, sendResponse_1.default)(res, {
         statusCode: http_status_1.default.OK,

@@ -36,19 +36,21 @@ const loginWithEmailAndPassword = (_a) => __awaiter(void 0, [_a], void 0, functi
     return {
         accessToken,
         refreshToken,
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        interests: user.interests,
-        phone: (_b = user.phone) !== null && _b !== void 0 ? _b : null,
-        picture: (_c = user.picture) !== null && _c !== void 0 ? _c : null,
-        status: user.status,
-        isVerified: user.isVerified,
-        bio: (_d = user.bio) !== null && _d !== void 0 ? _d : null,
-        city: (_e = user.city) !== null && _e !== void 0 ? _e : null,
-        avgRating: user.avgRating,
-        reviewCount: user.reviewCount,
+        user: {
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            role: user.role,
+            interests: user.interests,
+            phone: (_b = user.phone) !== null && _b !== void 0 ? _b : null,
+            picture: (_c = user.picture) !== null && _c !== void 0 ? _c : null,
+            status: user.status,
+            isVerified: user.isVerified,
+            bio: (_d = user.bio) !== null && _d !== void 0 ? _d : null,
+            city: (_e = user.city) !== null && _e !== void 0 ? _e : null,
+            avgRating: user.avgRating,
+            reviewCount: user.reviewCount,
+        }
     };
 });
 const authWithGoogle = (data) => __awaiter(void 0, void 0, void 0, function* () {
@@ -67,20 +69,26 @@ const authWithGoogle = (data) => __awaiter(void 0, void 0, void 0, function* () 
             }
         });
     }
+    const accessToken = jwtHelper_1.jwtHelper.generateToken({ id: user.id, email: user.email, role: user.role }, config_1.default.jwt.jwt_secret, config_1.default.jwt.expires_in);
+    const refreshToken = jwtHelper_1.jwtHelper.generateToken({ id: user.id, email: user.email, role: user.role }, config_1.default.jwt.refresh_token_secret, config_1.default.jwt.refresh_token_expires_in);
     return {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-        interests: user.interests,
-        phone: (_a = user.phone) !== null && _a !== void 0 ? _a : null,
-        picture: (_b = user.picture) !== null && _b !== void 0 ? _b : null,
-        status: user.status,
-        isVerified: user.isVerified,
-        bio: (_c = user.bio) !== null && _c !== void 0 ? _c : null,
-        city: (_d = user.city) !== null && _d !== void 0 ? _d : null,
-        avgRating: user.avgRating,
-        reviewCount: user.reviewCount,
+        accessToken,
+        refreshToken,
+        user: {
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            role: user.role,
+            interests: user.interests,
+            phone: (_a = user.phone) !== null && _a !== void 0 ? _a : null,
+            picture: (_b = user.picture) !== null && _b !== void 0 ? _b : null,
+            status: user.status,
+            isVerified: user.isVerified,
+            bio: (_c = user.bio) !== null && _c !== void 0 ? _c : null,
+            city: (_d = user.city) !== null && _d !== void 0 ? _d : null,
+            avgRating: user.avgRating,
+            reviewCount: user.reviewCount,
+        }
     };
 });
 const refreshToken = (token) => __awaiter(void 0, void 0, void 0, function* () {

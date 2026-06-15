@@ -1,32 +1,37 @@
 "use strict";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable no-empty */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.extractJsonFromMessage = void 0;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const extractJsonFromMessage = (message) => {
+const extractJsonFromMessage = (raw) => {
     try {
-        const content = (message === null || message === void 0 ? void 0 : message.content) || "";
-        // 1. Try to extract JSON code block (```json ... ```)
-        const jsonBlockMatch = content.match(/```json([\s\S]*?)```/);
-        if (jsonBlockMatch) {
-            const jsonText = jsonBlockMatch[1].trim();
-            return JSON.parse(jsonText);
-        }
-        // 2. If no code block, try to directly parse JSON if response is plain JSON
-        if (content.trim().startsWith("[") || content.trim().startsWith("{")) {
-            return JSON.parse(content);
-        }
-        // 3. Try to find the first JSON-like substring (fallback)
-        const jsonFallbackMatch = content.match(/(\[[\s\S]*\]|\{[\s\S]*\})/);
-        if (jsonFallbackMatch) {
-            return JSON.parse(jsonFallbackMatch[1]);
-        }
-        // 4. If still no valid JSON found
-        return [];
+        return JSON.parse(raw.trim());
     }
-    catch (error) {
-        // eslint-disable-next-line no-console
-        console.error("Error parsing AI response:", error);
-        return [];
+    catch (_) { }
+    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenced) {
+        try {
+            return JSON.parse(fenced[1].trim());
+        }
+        catch (_) { }
     }
+    const firstBrace = raw.indexOf("{");
+    const lastBrace = raw.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        try {
+            return JSON.parse(raw.slice(firstBrace, lastBrace + 1));
+        }
+        catch (_) { }
+    }
+    const firstBracket = raw.indexOf("[");
+    const lastBracket = raw.lastIndexOf("]");
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+        try {
+            const arr = JSON.parse(raw.slice(firstBracket, lastBracket + 1));
+            return { suggestedEvents: arr };
+        }
+        catch (_) { }
+    }
+    throw new Error("Could not extract valid JSON from AI response");
 };
 exports.extractJsonFromMessage = extractJsonFromMessage;

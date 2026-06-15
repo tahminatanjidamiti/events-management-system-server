@@ -11,6 +11,8 @@ import { Role } from "@prisma/client";
 
 const router = express.Router();
 
+router.get("/session/:transactionId", auth(Role.USER), PaymentController.getSession); 
+
 router.post(
   "/create-session",
   auth(Role.USER),

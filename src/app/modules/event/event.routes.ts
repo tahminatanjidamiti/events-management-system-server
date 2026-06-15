@@ -13,9 +13,9 @@ router.get("/me", auth(Role.ADMIN, Role.HOST, Role.USER), EventController.myEven
 router.get("/", EventController.listEvents);
 router.get("/:id", EventController.getEvent);
 router.post("/suggestion", EventController.getAISuggestions);
-router.post("/", fileUploader.upload.single("file"), validateRequest(EventValidation.createEventValidationSchema), auth(Role.HOST), EventController.createEvent)
-router.patch("/:id", fileUploader.upload.single("file"),
-  validateRequest(EventValidation.updateEventValidationSchema), auth(Role.HOST), EventController.updateEvent);
-router.delete("/:id", EventController.deleteEvent);
+router.post("/", auth(Role.HOST), fileUploader.upload.single("file"), validateRequest(EventValidation.createEventValidationSchema), EventController.createEvent)
+router.patch("/:id", auth(Role.HOST), fileUploader.upload.single("file"),
+  validateRequest(EventValidation.updateEventValidationSchema), EventController.updateEvent);
+router.delete("/:id", auth(Role.ADMIN, Role.HOST), EventController.deleteEvent);
 
 export const EventRoutes = router;

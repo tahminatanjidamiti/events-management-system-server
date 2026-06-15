@@ -16,7 +16,7 @@ router.get("/me", (0, auth_1.default)(client_1.Role.ADMIN, client_1.Role.HOST, c
 router.get("/", event_controller_1.EventController.listEvents);
 router.get("/:id", event_controller_1.EventController.getEvent);
 router.post("/suggestion", event_controller_1.EventController.getAISuggestions);
-router.post("/", fileUploader_1.fileUploader.upload.single("file"), (0, validateRequest_1.default)(event_validation_1.EventValidation.createEventValidationSchema), (0, auth_1.default)(client_1.Role.HOST), event_controller_1.EventController.createEvent);
-router.patch("/:id", fileUploader_1.fileUploader.upload.single("file"), (0, validateRequest_1.default)(event_validation_1.EventValidation.updateEventValidationSchema), (0, auth_1.default)(client_1.Role.HOST), event_controller_1.EventController.updateEvent);
-router.delete("/:id", event_controller_1.EventController.deleteEvent);
+router.post("/", (0, auth_1.default)(client_1.Role.HOST), fileUploader_1.fileUploader.upload.single("file"), (0, validateRequest_1.default)(event_validation_1.EventValidation.createEventValidationSchema), event_controller_1.EventController.createEvent);
+router.patch("/:id", (0, auth_1.default)(client_1.Role.HOST), fileUploader_1.fileUploader.upload.single("file"), (0, validateRequest_1.default)(event_validation_1.EventValidation.updateEventValidationSchema), event_controller_1.EventController.updateEvent);
+router.delete("/:id", (0, auth_1.default)(client_1.Role.ADMIN, client_1.Role.HOST), event_controller_1.EventController.deleteEvent);
 exports.EventRoutes = router;
