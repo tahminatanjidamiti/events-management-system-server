@@ -29,7 +29,7 @@ const emailSender = (to, subject, html) => __awaiter(void 0, void 0, void 0, fun
     });
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const info = yield transporter.sendMail({
-        from: `"From" ${config_1.default.emailSender.smtp_from}`, // sender address
+        from: `"From" <${config_1.default.emailSender.smtp_from}>`, // sender address
         to,
         subject,
         html,
