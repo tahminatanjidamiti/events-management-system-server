@@ -16,12 +16,12 @@ const nodemailer_1 = __importDefault(require("nodemailer"));
 const config_1 = __importDefault(require("../config"));
 const emailSender = (to, subject, html) => __awaiter(void 0, void 0, void 0, function* () {
     const transporter = nodemailer_1.default.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false, // Use `true` for port 465, `false` for all other ports
+        host: config_1.default.emailSender.smtp_host,
+        port: Number(config_1.default.emailSender.smtp_port),
+        secure: true, // Use `true` for port 465, `false` for all other ports like as used 587
         auth: {
-            user: config_1.default.emailSender.email,
-            pass: config_1.default.emailSender.app_pass, // app password
+            user: config_1.default.emailSender.smtp_user,
+            pass: config_1.default.emailSender.smtp_pass, // app password
         },
         tls: {
             rejectUnauthorized: false
@@ -29,7 +29,7 @@ const emailSender = (to, subject, html) => __awaiter(void 0, void 0, void 0, fun
     });
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const info = yield transporter.sendMail({
-        from: '"From" <mity2027@gmail.com>', // sender address
+        from: `"From" ${config_1.default.emailSender.smtp_from}`, // sender address
         to,
         subject,
         html,

@@ -21,8 +21,11 @@ export default {
     stripeSecretKey: process.env.STRIPE_SECRET_KEY,
     webhookSecret: process.env.WEB_HOOK_SECRET,
     emailSender: {
-        email: process.env.EMAIL,
-        app_pass: process.env.APP_PASS
+        smtp_host: process.env.SMTP_HOST,
+        smtp_port: process.env.SMTP_PORT,
+        smtp_user: process.env.SMTP_USER,
+        smtp_pass: process.env.SMTP_PASS,
+        smtp_from: process.env.SMTP_FROM,
     },
     jwt: {
         jwt_secret: process.env.JWT_SECRET,
