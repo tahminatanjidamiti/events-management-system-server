@@ -27,6 +27,10 @@ export default {
         smtp_pass: process.env.SMTP_PASS,
         smtp_from: process.env.SMTP_FROM,
     },
+    brevo: {
+    apiKey: process.env.BREVO_API_KEY,
+    fromEmail: process.env.BREVO_FROM_EMAIL,
+},
     jwt: {
         jwt_secret: process.env.JWT_SECRET,
         expires_in: process.env.EXPIRES_IN,

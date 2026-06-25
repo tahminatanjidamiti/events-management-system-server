@@ -29,6 +29,6 @@ const paymentWebhookHandler = (req, res) => __awaiter(void 0, void 0, void 0, fu
     if (event.type === "checkout.session.completed") {
         yield payment_service_1.PaymentService.handleStripeCheckoutCompleted(event.data.object);
     }
-    res.json({ received: true });
+    return res.status(200).json({ received: true });
 });
 exports.paymentWebhookHandler = paymentWebhookHandler;

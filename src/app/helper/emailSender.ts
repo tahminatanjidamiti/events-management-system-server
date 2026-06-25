@@ -1,34 +1,32 @@
-import nodemailer from 'nodemailer'
 import config from '../config';
-
-
 
 const emailSender = async (
     to: string,
     subject: string,
     html: string
 ) => {
-    const transporter = nodemailer.createTransport({
-        host: config.emailSender.smtp_host,
-        port: Number(config.emailSender.smtp_port),
-        secure: true, // Use `true` for port 465, `false` for all other ports like as used 587
-        auth: {
-            user: config.emailSender.smtp_user,
-            pass: config.emailSender.smtp_pass, // app password
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+            'api-key': config.brevo.apiKey as string,
+            'Content-Type': 'application/json',
+            'accept': 'application/json',
         },
-        tls: {
-            rejectUnauthorized: false
-        }
+        body: JSON.stringify({
+            sender: {
+                name: 'EventsVibe',
+                email: config.brevo.fromEmail,
+            },
+            to: [{ email: to }],
+            subject,
+            htmlContent: html,
+        }),
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const info = await transporter.sendMail({
-        from: `"From" <${config.emailSender.smtp_from}>`, // sender address
-        to,
-        subject,
-        html,
-    });
-
-}
+    if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`Brevo email failed: ${response.status} - ${errorBody}`);
+    }
+};
 
 export default emailSender;

@@ -22,5 +22,5 @@ export const paymentWebhookHandler = async (req: Request, res: Response) => {
     await PaymentService.handleStripeCheckoutCompleted(event.data.object);
   }
 
-  res.json({ received: true });
+  return res.status(200).json({ received: true });
 };

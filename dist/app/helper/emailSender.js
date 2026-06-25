@@ -12,27 +12,28 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const nodemailer_1 = __importDefault(require("nodemailer"));
 const config_1 = __importDefault(require("../config"));
 const emailSender = (to, subject, html) => __awaiter(void 0, void 0, void 0, function* () {
-    const transporter = nodemailer_1.default.createTransport({
-        host: config_1.default.emailSender.smtp_host,
-        port: Number(config_1.default.emailSender.smtp_port),
-        secure: true, // Use `true` for port 465, `false` for all other ports like as used 587
-        auth: {
-            user: config_1.default.emailSender.smtp_user,
-            pass: config_1.default.emailSender.smtp_pass, // app password
+    const response = yield fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+            'api-key': config_1.default.brevo.apiKey,
+            'Content-Type': 'application/json',
+            'accept': 'application/json',
         },
-        tls: {
-            rejectUnauthorized: false
-        }
+        body: JSON.stringify({
+            sender: {
+                name: 'EventsVibe',
+                email: config_1.default.brevo.fromEmail,
+            },
+            to: [{ email: to }],
+            subject,
+            htmlContent: html,
+        }),
     });
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const info = yield transporter.sendMail({
-        from: `"From" <${config_1.default.emailSender.smtp_from}>`, // sender address
-        to,
-        subject,
-        html,
-    });
+    if (!response.ok) {
+        const errorBody = yield response.text();
+        throw new Error(`Brevo email failed: ${response.status} - ${errorBody}`);
+    }
 });
 exports.default = emailSender;
